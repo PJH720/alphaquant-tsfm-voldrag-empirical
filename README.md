@@ -45,7 +45,7 @@ Periods:
 
 ```bash
 uv sync
-uv run pytest                    # timing / constraint / formula tests on synthetic data
+uv run pytest                    # synthetic-data timing/constraint tests + real-data reference checks (needs network)
 uv run python -m voldrag.run     # downloads data (cached in data/raw), ~30 s on an Apple M4 (Chronos inference ~20 s; first run also downloads data and model weights)
 ```
 

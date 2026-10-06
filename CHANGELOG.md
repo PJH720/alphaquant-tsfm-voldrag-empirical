@@ -24,3 +24,7 @@ These were found while fetching data. At that point only coverage, row counts an
 ## First results run
 
 - 2026-10-07 02:05 KST: first full run of `python -m voldrag.run` on code commit `930abbd`. No parameter or code changes after this run. Extreme 2026 KOSPI moves (e.g. +24% on 2026-07-31) were checked across 069500.KS, 102110.KS and ^KS11 and kept as genuine market data.
+
+## Post-results additions (no parameter or result change)
+
+- 2026-10-07: `tests/test_data_reference.py` checks downloaded data against published values: SPY/QQQ/GLD calendar-year total returns 2016-2024 (±0.3%p), KOSPI year-end closes 2019-2024 (±0.01), VIX 2020-03-16 and USD/KRW 2020-03-19 (FRED), and that distributions are reflected in adjusted prices. All 34 checks pass on the data used for the first run. Data after 2024 is not covered.
