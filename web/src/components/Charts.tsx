@@ -10,6 +10,7 @@ import {
   submission, type PeriodId, type StrategyId,
 } from "@/lib/data";
 import { dragStats } from "@/lib/derived";
+import { useMode } from "./Mode";
 import { Figure, Footnote, LegendToggle, MarkerShape, STYLE, Toggle, axisTick, gridProps } from "./kit";
 
 const PERIODS: { id: PeriodId; label: string }[] = [
@@ -24,7 +25,7 @@ function useVisible() {
 }
 
 type TipEntry = { dataKey?: unknown; value?: unknown };
-function SeriesTooltip({ active, payload, label, valueFmt }: { active?: boolean; payload?: TipEntry[]; label?: unknown; valueFmt: (v: number) => string }) {
+function SeriesTooltip({ active, payload, label, valueFmt, colorOverride }: { active?: boolean; payload?: TipEntry[]; label?: unknown; valueFmt: (v: number) => string; colorOverride?: string }) {
   if (!active || !payload?.length) return null;
   const rows = payload.filter((p) => typeof p.value === "number" && STRATEGIES.includes(p.dataKey as StrategyId));
   rows.sort((a, b) => (b.value as number) - (a.value as number));
@@ -36,7 +37,7 @@ function SeriesTooltip({ active, payload, label, valueFmt }: { active?: boolean;
         return (
           <div className="t-row" key={id}>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="12" height="12" aria-hidden="true"><MarkerShape shape={STYLE[id].shape === "none" ? "circle" : STYLE[id].shape} x={6} y={6} color={STYLE[id].color} size={9} /></svg>
+              <svg width="12" height="12" aria-hidden="true"><MarkerShape shape={STYLE[id].shape === "none" ? "circle" : STYLE[id].shape} x={6} y={6} color={colorOverride ?? STYLE[id].color} size={9} /></svg>
               {KO[id]}
             </span>
             <span>{valueFmt(p.value as number)}</span>
@@ -48,11 +49,11 @@ function SeriesTooltip({ active, payload, label, valueFmt }: { active?: boolean;
 }
 
 /** Sparse markers so dashed lines stay identifiable without cluttering. */
-function sparseDot(id: StrategyId, every: number, offset: number) {
+function sparseDot(id: StrategyId, every: number, offset: number, colorOverride?: string) {
   const SparseDot = (props: { cx?: number; cy?: number; index?: number }) => {
     const { cx, cy, index = 0 } = props;
     if (cx == null || cy == null || STYLE[id].shape === "none" || (index + offset) % every !== 0) return <g key={`${id}-${index}`} />;
-    return <g key={`${id}-${index}`}><MarkerShape shape={STYLE[id].shape} x={cx} y={cy} color={STYLE[id].color} /></g>;
+    return <g key={`${id}-${index}`}><MarkerShape shape={STYLE[id].shape} x={cx} y={cy} color={colorOverride ?? STYLE[id].color} /></g>;
   };
   return SparseDot;
 }
@@ -68,45 +69,77 @@ function yearTicks(dates: string[]) {
 }
 
 // ------------------------------------------------------------------ 3. cumulative wealth
+const CORE: StrategyId[] = ["proposed", "6040", "mvo", "ew"];
+const SIM_IDS = CORE; // the submission has these four strategies only
+
 export function CurvesChart() {
-  const [period, setPeriod] = useState<PeriodId>("primary");
+  const { mode } = useMode();
+  const isSim = mode === "simulation";
+  const [periodSel, setPeriod] = useState<PeriodId>("secondary");
+  const period: PeriodId = isSim ? "secondary" : periodSel; // the submission's sample = 2nd period
   const [log, setLog] = useState(false);
-  const { visible, toggle } = useVisible();
+  const [visible, setVisible] = useState<Record<string, boolean>>(() => Object.fromEntries(STRATEGIES.map((s) => [s, CORE.includes(s)])));
+  const toggle = (id: StrategyId) => setVisible((v) => ({ ...v, [id]: !v[id] }));
   const c = curves[period];
-  const last = c.rows[c.rows.length - 1];
-  const ranked = [...STRATEGIES].sort((a, b) => last[b] - last[a]);
-  const summary = `${PERIOD_LABEL[period]} ${c.start}부터 ${c.end}까지, 비용 ${c.cost_bp}bp 기준 누적자산. 최종 자산은 ${ranked
+  const ids = isSim ? SIM_IDS : STRATEGIES;
+  const t0 = new Date(c.rows[0].date).getTime();
+  // Simulation mode: the submission has no time series. Its analytic path W_t = (1 + CAGR)^t is drawn instead.
+  const rows = useMemo(() => isSim
+    ? c.rows.map((r) => {
+        const yrs = (new Date(r.date).getTime() - t0) / (365.25 * 864e5);
+        const out: Record<string, number | string> = { date: r.date };
+        for (const s of SIM_IDS) out[s] = (1 + submission.strategies[SUB_KEY[s]!].analytic.cagr_pct / 100) ** yrs;
+        return out;
+      })
+    : c.rows, [isSim, c, t0]);
+  const last = rows[rows.length - 1] as Record<string, number>;
+  const ranked = [...ids].sort((a, b) => last[b] - last[a]);
+  const summary = `${isSim ? "제출본 해석적 경로 (1+CAGR)^t" : `${PERIOD_LABEL[period]} 실데이터 누적자산`}, ${c.start}부터 ${c.end}까지, 비용 ${c.cost_bp}bp. 최종 자산 ${ranked
     .map((s) => `${KO[s]} ${fmt(last[s], 2)}배`).join(", ")}.`;
   const ticks = useMemo(() => yearTicks(c.rows.map((r) => r.date)), [c]);
-  const every = Math.max(1, Math.round(c.rows.length / 10));
+  const every = Math.max(1, Math.round(rows.length / 10));
+  const color = (id: StrategyId) => (isSim ? "var(--sim)" : STYLE[id].color);
 
   return (
     <Figure
-      title="누적자산 곡선 (초기 자산 = 1)"
-      caption={`${PERIOD_LABEL[period]} · ${c.start} → ${c.end} · 거래비용 ${c.cost_bp}bp 차감 후, 주간 표본`}
+      title={isSim ? "제출본: 파라미터가 함의하는 해석적 경로 (초기 자산 = 1)" : "실데이터 누적자산 곡선 (초기 자산 = 1)"}
+      caption={isSim
+        ? <><span className="chip chip-sim">시뮬레이션 · 해석적 계산</span> W<sub>t</sub> = (1 + CAGR)<sup>t</sup> · 제출본에는 일별 시계열이 없으므로 실제 경로가 아니다 · 표본 {c.start} → {c.end}</>
+        : `${PERIOD_LABEL[period]} · ${c.start} → ${c.end} · 거래비용 ${c.cost_bp}bp 차감 후, 주간 표본`}
       summary={summary}
-      footnote={<Footnote sources={[c.source]} extra={<>주간 리샘플은 <code>voldrag.export_web</code></>} />}
+      footnote={isSim
+        ? <Footnote sources={[{ file: `${provenance.submission.repo}:${provenance.submission.path}`, commit: provenance.submission.commit.slice(0, 7), sha256: "" }]} extra="CAGR(analytic)로 경로 계산" />
+        : <Footnote sources={[c.source]} extra={<>주간 리샘플은 <code>voldrag.export_web</code></>} />}
     >
       <div className="controls">
-        <Toggle label="평가 기간" options={PERIODS} value={period} onChange={setPeriod} />
-        <span className="sep" />
+        {!isSim && <><Toggle label="평가 기간" options={PERIODS} value={periodSel} onChange={setPeriod} /><span className="sep" /></>}
         <button type="button" aria-pressed={log} onClick={() => setLog((v) => !v)}>로그 스케일</button>
       </div>
-      <LegendToggle ids={STRATEGIES} visible={visible} onToggle={toggle} />
-      <div style={{ height: "min(52vh, 520px)", minHeight: 300 }}>
+      <div className="legend" role="group" aria-label="전략 표시 켜기·끄기">
+        {ids.map((id) => (
+          <button key={id} type="button" aria-pressed={visible[id]} onClick={() => toggle(id)}>
+            <svg width="34" height="14" aria-hidden="true">
+              <line x1="1" y1="7" x2="33" y2="7" stroke={color(id)} strokeWidth={STYLE[id].width} strokeDasharray={STYLE[id].dash} />
+              <MarkerShape shape={STYLE[id].shape} x={17} y={7} color={color(id)} size={8} />
+            </svg>
+            {KO[id]}
+          </button>
+        ))}
+      </div>
+      <div style={{ height: "min(50vh, 500px)", minHeight: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={c.rows} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
+          <LineChart data={rows} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
             <CartesianGrid {...gridProps} vertical={false} />
             <XAxis dataKey="date" ticks={ticks} tickFormatter={(d: string) => d.slice(0, 4)} tick={axisTick} stroke="var(--rule)" />
             <YAxis
               scale={log ? "log" : "linear"} domain={log ? ["auto", "auto"] : [0, "auto"]} allowDataOverflow={log}
               tick={axisTick} stroke="var(--rule)" width={52} tickFormatter={(v: number) => `${fmt(v, 1)}×`}
             />
-            <Tooltip content={<SeriesTooltip valueFmt={(v) => `${fmt(v, 3)}×`} />} />
-            {STRATEGIES.map((id, i) => visible[id] && (
+            <Tooltip content={<SeriesTooltip valueFmt={(v) => `${fmt(v, 3)}×`} colorOverride={isSim ? "var(--sim)" : undefined} />} />
+            {ids.map((id, i) => visible[id] && (
               <Line
-                key={id} dataKey={id} type="linear" stroke={STYLE[id].color} strokeWidth={STYLE[id].width}
-                strokeDasharray={STYLE[id].dash} dot={sparseDot(id, every, i * 2)} activeDot={{ r: 5 }} isAnimationActive={false}
+                key={id} dataKey={id} type="linear" stroke={color(id)} strokeWidth={STYLE[id].width}
+                strokeDasharray={STYLE[id].dash} dot={sparseDot(id, every, i * 2, isSim ? "var(--sim)" : undefined)} activeDot={{ r: 5 }} isAnimationActive={false}
               />
             ))}
           </LineChart>
@@ -117,8 +150,10 @@ export function CurvesChart() {
         <table>
           <thead><tr><th>전략</th><th>최종 자산 (배)</th><th>CAGR</th><th>샤프</th><th>MDD</th></tr></thead>
           <tbody>
-            {STRATEGIES.map((s) => {
-              const p = performance.performance[period][String(c.cost_bp)][s];
+            {ids.map((s) => {
+              const p = isSim
+                ? { cagr_pct: submission.strategies[SUB_KEY[s]!].analytic.cagr_pct, sharpe: submission.strategies[SUB_KEY[s]!].analytic.sharpe, mdd_pct: submission.strategies[SUB_KEY[s]!].parameters.mdd_pct }
+                : performance.performance[period][String(c.cost_bp)][s];
               return <tr key={s}><td>{KO[s]}</td><td className="num">{fmt(last[s], 3)}</td><td className="num">{pct(p.cagr_pct)}</td><td className="num">{fmt(p.sharpe)}</td><td className="num">{pct(p.mdd_pct)}</td></tr>;
             })}
           </tbody>
@@ -242,6 +277,7 @@ function nearestRowDate(target: string) {
 
 export function CrisisCharts() {
   const { visible, toggle } = useVisible();
+  const [logScore, setLogScore] = useState(true);
   const sg = crisis.episode.proposed_safeguard;
   const firstReal = sg.first_trigger ? nearestRowDate(sg.first_trigger) : null;
   const subDate = nearestRowDate(crisis.submission_narrative.trigger_date);
@@ -249,17 +285,18 @@ export function CrisisCharts() {
   const last = rows[rows.length - 1];
   const ticks = rows.filter((r, i) => i === 0 || r.date.slice(5, 7) !== rows[i - 1].date.slice(5, 7)).map((r) => r.date);
   const every = Math.max(1, Math.round(rows.length / 8));
-  const refLines = (withLabels: boolean) => [
+  const refLines = (withLabels: boolean, yAxisId?: string) => [
     firstReal && (
-      <ReferenceLine key="real" x={firstReal} stroke="var(--ok)" strokeWidth={2.5} ifOverflow="extendDomain"
+      <ReferenceLine key="real" x={firstReal} yAxisId={yAxisId} stroke="var(--ok)" strokeWidth={2.5} ifOverflow="extendDomain"
         label={withLabels ? { value: `실데이터 첫 발동 ${shortDate(sg.first_trigger!)}`, position: "insideTopLeft", fill: "var(--ok-ink)", fontSize: 13, fontWeight: 600 } : undefined} />
     ),
-    <ReferenceLine key="sub" x={subDate} stroke="var(--sim)" strokeWidth={2} strokeDasharray="6 5" ifOverflow="extendDomain"
+    <ReferenceLine key="sub" x={subDate} yAxisId={yAxisId} stroke="var(--sim)" strokeWidth={2} strokeDasharray="6 5" ifOverflow="extendDomain"
       label={withLabels ? { value: `제출본 예시 시나리오 ${shortDate(crisis.submission_narrative.trigger_date)}`, position: "insideBottomRight", fill: "var(--sim-ink)", fontSize: 13 } : undefined} />,
   ];
   const summaryTop = `${crisis.window.start}부터 ${crisis.window.end}까지 전략별 누적자산(비용 ${crisis.cost_bp}bp). 기간 말 ${STRATEGIES
     .map((s) => `${KO[s]} ${fmt(last[s], 3)}배`).join(", ")}. 실데이터 세이프가드 첫 발동 ${sg.first_trigger}, 제출본 예시 시나리오의 발동일 ${crisis.submission_narrative.trigger_date}.`;
-  const summaryBottom = `제안 모델의 세이프가드 β와 현금 비중(%). 에피소드 기간 β>0인 날 ${sg.days_beta_positive}일, 최대 β ${fmt(sg.max_beta)}, 평균 현금 비중 ${fmt(sg.mean_cash_weight_pct, 1)}%.`;
+  const peak = rows.reduce((a, r) => (r.score > a.score ? r : a));
+  const summaryBottom = `이상치 점수 S, 동적 임계치 τ, 리스크 버퍼 β, 제안 모델 현금 비중. S의 최고점은 ${peak.date}의 ${fmt(peak.score, 3)}(τ ${fmt(peak.tau, 3)}). 에피소드 기간 β>0인 날 ${sg.days_beta_positive}일, 최대 β ${fmt(sg.max_beta)}, 평균 현금 비중 ${fmt(sg.mean_cash_weight_pct, 1)}%.`;
 
   return (
     <div style={{ display: "grid", gap: "0.8rem" }}>
@@ -287,30 +324,47 @@ export function CrisisCharts() {
         </div>
       </Figure>
       <Figure
-        title="세이프가드 β와 제안 모델 현금 비중 (%)"
-        caption="같은 시간축 · β는 이상 점수 S가 임계값 τ를 넘을 때만 0보다 크다 · 두 값 모두 0–100% 척도"
+        title="세이프가드: 이상치 점수 S · 동적 임계치 τ · 리스크 버퍼 β · 현금 비중"
+        caption="같은 시간축 · 왼쪽 축 = 재구성 오차 점수 S와 임계치 τ (S > τ일 때만 β > 0) · 오른쪽 축 = β와 제안 모델 현금 비중 (0–100%) · 현금 비중 = 최적화가 고른 CASH 자산 + β만큼의 현금 전환"
         summary={summaryBottom}
-        footnote={<Footnote sources={[crisis.sources.safeguard_signals, crisis.sources.weights]} extra="비중 파일은 Linux/CUDA 재현 실행 산출물 (허용 오차 내)" />}
+        footnote={<Footnote sources={[crisis.sources.safeguard_signals, crisis.sources.weights]} />}
       >
-        <div style={{ height: "min(22vh, 220px)", minHeight: 160 }}>
+        <div className="controls">
+          <button type="button" aria-pressed={logScore} onClick={() => setLogScore((v) => !v)}>점수 축 로그 스케일</button>
+        </div>
+        <div style={{ height: "min(30vh, 300px)", minHeight: 220 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} syncId="crisis" margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+            <ComposedChart data={rows} syncId="crisis" margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
               <CartesianGrid {...gridProps} vertical={false} />
               <XAxis dataKey="date" ticks={ticks} tickFormatter={(d: string) => `${Number(d.slice(5, 7))}월`} tick={axisTick} stroke="var(--rule)" />
-              <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tick={axisTick} stroke="var(--rule)" width={52} tickFormatter={(v: number) => `${v}%`} />
-              <Tooltip content={({ active, payload, label }) => active && payload?.length ? (
-                <div className="tooltip"><div className="t-date">{String(label)}</div>
-                  <div className="t-row"><span>세이프가드 β</span><span>{fmt(Number(payload.find((p) => p.dataKey === "beta_pct")?.value ?? 0), 1)}%</span></div>
-                  <div className="t-row"><span>현금 비중</span><span>{fmt(Number(payload.find((p) => p.dataKey === "cash_pct")?.value ?? 0), 1)}%</span></div></div>) : null} />
-              {refLines(false)}
-              <Area dataKey="beta_pct" type="stepAfter" stroke="var(--ok)" strokeWidth={1.5} fill="var(--ok)" fillOpacity={0.18} isAnimationActive={false} name="β" />
-              <Line dataKey="cash_pct" stroke="var(--s-proposed)" strokeWidth={2.5} dot={false} isAnimationActive={false} name="현금 비중" />
+              <YAxis yAxisId="score" scale={logScore ? "log" : "linear"} domain={logScore ? ["auto", "auto"] : [0, "auto"]} allowDataOverflow={logScore} tick={axisTick} stroke="var(--rule)" width={52} tickFormatter={(v: number) => fmt(v, v < 10 ? 1 : 0)}
+                label={{ value: "점수 S · τ", angle: -90, position: "insideLeft", fill: "var(--ink-2)", fontSize: 12 }} />
+              <YAxis yAxisId="pct" orientation="right" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={axisTick} stroke="var(--rule)" width={52}
+                tickFormatter={(v: number) => `${v}%`} label={{ value: "β · 현금 (%)", angle: 90, position: "insideRight", fill: "var(--ink-2)", fontSize: 12 }} />
+              <Tooltip content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const r = payload[0].payload as (typeof rows)[number];
+                return (
+                  <div className="tooltip"><div className="t-date">{String(label)}</div>
+                    <div className="t-row"><span>이상치 점수 S</span><span>{fmt(r.score, 3)}</span></div>
+                    <div className="t-row"><span>동적 임계치 τ</span><span>{fmt(r.tau, 3)}</span></div>
+                    <div className="t-row"><span>리스크 버퍼 β</span><span>{fmt(r.beta_pct, 1)}%</span></div>
+                    <div className="t-row"><span>현금 비중</span><span>{fmt(r.cash_pct, 1)}%</span></div></div>
+                );
+              }} />
+              {refLines(false, "pct")}
+              <Area yAxisId="pct" dataKey="beta_pct" type="stepAfter" stroke="var(--ok)" strokeWidth={1.5} fill="var(--ok)" fillOpacity={0.18} isAnimationActive={false} />
+              <Line yAxisId="pct" dataKey="cash_pct" stroke="var(--s-proposed)" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+              <Line yAxisId="score" dataKey="score" stroke="var(--s-ito_tsfm)" strokeWidth={2} dot={false} isAnimationActive={false} />
+              <Line yAxisId="score" dataKey="tau" stroke="var(--fail)" strokeWidth={2} strokeDasharray="6 4" dot={false} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <div className="legend" aria-hidden="true" style={{ fontSize: "0.78rem", gap: "1.2rem" }}>
-          <span><svg width="24" height="12"><rect width="24" height="12" fill="var(--ok)" fillOpacity="0.25" stroke="var(--ok)" /></svg> 세이프가드 β (면적)</span>
-          <span><svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="var(--s-proposed)" strokeWidth="2.5" /></svg> 제안 모델 현금 비중 (선)</span>
+        <div className="legend" aria-hidden="true" style={{ fontSize: "0.78rem", gap: "1.1rem" }}>
+          <span><svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="var(--s-ito_tsfm)" strokeWidth="2" /></svg> 이상치 점수 S (왼쪽)</span>
+          <span><svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="var(--fail)" strokeWidth="2" strokeDasharray="5 3" /></svg> 동적 임계치 τ (왼쪽)</span>
+          <span><svg width="24" height="12"><rect width="24" height="12" fill="var(--ok)" fillOpacity="0.25" stroke="var(--ok)" /></svg> 리스크 버퍼 β (오른쪽, 면적)</span>
+          <span><svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="var(--s-proposed)" strokeWidth="2.5" /></svg> 현금 비중 (오른쪽)</span>
           <span><svg width="24" height="12"><line x1="12" y1="0" x2="12" y2="12" stroke="var(--ok)" strokeWidth="2.5" /></svg> 실데이터 첫 발동</span>
           <span><svg width="24" height="12"><line x1="12" y1="0" x2="12" y2="12" stroke="var(--sim)" strokeWidth="2" strokeDasharray="3 2" /></svg> 제출본 예시 시나리오</span>
         </div>
@@ -322,12 +376,14 @@ export function CrisisCharts() {
 // ------------------------------------------------------------------ 6. costs
 export function CostCharts() {
   const [period, setPeriod] = useState<PeriodId>("primary");
-  const costs = performance.costs_bp;
+  const ex = performance.exploratory_costs;
+  const costs = [...new Set([...performance.costs_bp, ...ex.costs_bp])].sort((a, b) => a - b);
   const subRows = submission.illustrative_scenario.cost_sensitivity;
   const rows = costs.map((c) => {
-    const r = performance.performance[period][String(c)].proposed;
+    const exploratory = !performance.costs_bp.includes(c);
+    const r = (exploratory ? ex.performance : performance.performance)[period][String(c)].proposed;
     const s = subRows.find((x) => x.cost_bp === c)?.proposed;
-    return { cost: `${c}bp`, real_cagr: r.cagr_pct, real_sharpe: r.sharpe, sub_cagr: s?.cagr_pct ?? null, sub_sharpe: s?.sharpe ?? null };
+    return { cost: exploratory ? `${c}bp*` : `${c}bp`, exploratory, real_cagr: r.cagr_pct, real_sharpe: r.sharpe, sub_cagr: s?.cagr_pct ?? null, sub_sharpe: s?.sharpe ?? null };
   });
   const base = String(performance.base_cost_bp);
   const turnover = STRATEGIES.map((s) => ({ id: s, name: KO[s], v: performance.performance[period][base][s].turnover_annual_pct }));
@@ -341,11 +397,18 @@ export function CostCharts() {
         <YAxis tick={axisTick} stroke="var(--rule)" width={40} />
         <Tooltip cursor={{ fill: "var(--surface-2)" }} content={({ active, payload, label }) => active && payload?.length ? (
           <div className="tooltip"><div className="t-date">{String(label)}</div>
-            {payload.map((p) => <div className="t-row" key={String(p.dataKey)}><span>{String(p.dataKey).startsWith("sub") ? "제출본 (시뮬레이션)" : "실데이터"}</span><span>{fmt(Number(p.value))}{unit}</span></div>)}</div>) : null} />
+            {payload.map((p) => <div className="t-row" key={String(p.dataKey)}><span>{String(p.dataKey).startsWith("sub") ? "제출본 (시뮬레이션)" : (p.payload as { exploratory: boolean }).exploratory ? "실데이터 (탐색적)" : "실데이터"}</span><span>{fmt(Number(p.value))}{unit}</span></div>)}</div>) : null} />
         <Bar dataKey={`sub_${key}`} fill="var(--sim)" radius={[4, 4, 0, 0]} isAnimationActive={false}>
           <LabelList dataKey={`sub_${key}`} position="top" formatter={(v: unknown) => fmt(Number(v))} fill="var(--sim-ink)" fontSize={12} />
         </Bar>
+        <defs>
+          <pattern id={`hatch-${key}`} patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
+            <rect width="7" height="7" fill="var(--real-bg)" />
+            <line x1="0" y1="0" x2="0" y2="7" stroke="var(--real)" strokeWidth="3" />
+          </pattern>
+        </defs>
         <Bar dataKey={`real_${key}`} fill="var(--real)" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+          {rows.map((r) => <Cell key={r.cost} fill={r.exploratory ? `url(#hatch-${key})` : "var(--real)"} stroke="var(--real)" strokeWidth={r.exploratory ? 1.5 : 0} />)}
           <LabelList dataKey={`real_${key}`} position="top" formatter={(v: unknown) => fmt(Number(v))} fill="var(--ink)" fontSize={12} fontWeight={600} />
         </Bar>
       </BarChart>
@@ -354,7 +417,7 @@ export function CostCharts() {
   return (
     <div style={{ display: "grid", gap: "0.8rem" }}>
       <Figure
-        title="제안 모델: 거래비용별 CAGR(%)과 샤프"
+        title="비용 민감도: 제안 모델의 슬리피지별 성과 감쇠"
         caption={<>회색 = 제출본 비용 민감도 표 (<span className="chip chip-sim">예시 시나리오</span>, {submission.metadata.sample.start}–{submission.metadata.sample.end}) · 남색 = 실데이터 · {PERIOD_LABEL[period]}</>}
         summary={summaryA}
         footnote={<Footnote sources={[performance.source, { file: `${provenance.submission.repo}:${provenance.submission.path}`, commit: provenance.submission.commit.slice(0, 7), sha256: "" }]} />}
@@ -366,8 +429,10 @@ export function CostCharts() {
         </div>
         <div className="legend" aria-hidden="true" style={{ fontSize: "0.78rem", gap: "1.2rem" }}>
           <span><svg width="14" height="12"><rect width="14" height="12" rx="2" fill="var(--sim)" /></svg> 제출본 (시뮬레이션)</span>
-          <span><svg width="14" height="12"><rect width="14" height="12" rx="2" fill="var(--real)" /></svg> 실데이터</span>
+          <span><svg width="14" height="12"><rect width="14" height="12" rx="2" fill="var(--real)" /></svg> 실데이터 (사전등록 0/10/20bp)</span>
+          <span><svg width="14" height="12"><rect x="0.75" y="0.75" width="12.5" height="10.5" rx="2" fill="var(--real-bg)" stroke="var(--real)" strokeWidth="1.5" /><line x1="2" y1="11" x2="12" y2="1" stroke="var(--real)" strokeWidth="2" /></svg> * 탐색적 분석 (사전등록 아님)</span>
         </div>
+        <p className="footnote" style={{ borderTop: 0, marginTop: 0 }}>* {costs.filter((c) => !performance.costs_bp.includes(c)).join(", ")}bp는 사전등록 비용 격자({performance.costs_bp.join("/")}bp)에 없던 <b>탐색적</b> 결과다 · <code>{ex.source.file}</code> @ <code>{ex.source.commit}</code></p>
       </Figure>
       <Figure
         title={`연간 회전율 (%/년, 비용 ${base}bp)`}

@@ -34,6 +34,7 @@ export interface Performance {
   episodes: Record<string, Episode>;
   episode_windows: Record<string, { start: string; end: string }>;
   source: Source;
+  exploratory_costs: { label: string; costs_bp: number[]; performance: Record<PeriodId, Record<string, Record<StrategyId, Perf>>>; source: Source };
 }
 
 export type CurveRow = { date: string } & Record<StrategyId, number>;

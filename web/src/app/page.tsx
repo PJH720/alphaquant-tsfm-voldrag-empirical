@@ -1,3 +1,5 @@
+import Dashboard from "@/components/Dashboard";
+import { ModeProvider } from "@/components/Mode";
 import Nav from "@/components/Nav";
 import { CostCharts, CrisisCharts, CurvesChart, DragScatter, ErgodicityBars, SignificancePlot } from "@/components/Charts";
 import { DRAG_TOLERANCE_PP, cmpWord, dragStats } from "@/lib/derived";
@@ -18,49 +20,6 @@ function Status({ ok, okText = "확인됨", failText = "재현 안 됨" }: { ok:
 
 function Eyebrow({ n, children }: { n: number; children: React.ReactNode }) {
   return <div className="eyebrow"><span className="num">{String(n).padStart(2, "0")}</span><span>·</span>{children}</div>;
-}
-
-// ------------------------------------------------------------------ 2. comparison cards
-function CompareCards() {
-  const period: PeriodId = "secondary"; // same sample as the submission (2015-01 → 2026-08)
-  const base = String(performance.base_cost_bp);
-  const real = performance.performance[period][base].proposed;
-  const realPrimary = performance.performance.primary[base].proposed;
-  const sub = submission.strategies.proposed;
-  const maxCost = Math.max(...performance.costs_bp);
-  const realHi = performance.performance[period][String(maxCost)].proposed;
-  const realHiPrimary = performance.performance.primary[String(maxCost)].proposed;
-  const subHi = submission.illustrative_scenario.cost_sensitivity.find((r) => r.cost_bp === maxCost)!.proposed;
-  const cards = [
-    { title: `CAGR (${base}bp)`, sim: sub.analytic.cagr_pct, simNature: "해석적 계산 (μ − ½σ²)", real: real.cagr_pct, primary: realPrimary.cagr_pct, unit: "%", d: 2 },
-    { title: `샤프 비율 (${base}bp)`, sim: sub.analytic.sharpe, simNature: "해석적 계산", real: real.sharpe, primary: realPrimary.sharpe, unit: "", d: 2 },
-    { title: "최대 낙폭 MDD", sim: sub.parameters.mdd_pct, simNature: "입력 파라미터", real: real.mdd_pct, primary: realPrimary.mdd_pct, unit: "%", d: 2 },
-    { title: `CAGR (${maxCost}bp)`, sim: subHi.cagr_pct, simNature: "예시 시나리오", real: realHi.cagr_pct, primary: realHiPrimary.cagr_pct, unit: "%", d: 2 },
-  ];
-  return (
-    <div className="cards">
-      {cards.map((c) => {
-        const ok = c.real >= c.sim; // higher is better for all four (MDD is negative)
-        return (
-          <article className="card" key={c.title} aria-label={`${c.title}: 제출본 ${fmt(c.sim, c.d)}${c.unit}, 실데이터 ${fmt(c.real, c.d)}${c.unit}`}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-              <h3>{c.title}</h3><Status ok={ok} />
-            </div>
-            <div className="row">
-              <span className="chip chip-sim">시뮬레이션 파라미터</span>
-              <span className="big sim num">{fmt(c.sim, c.d)}{c.unit}</span>
-              <span className="chip chip-real">사전등록 실데이터</span>
-              <span className="big real num">{fmt(c.real, c.d)}{c.unit}</span>
-            </div>
-            <div className="delta num">
-              차이 <b>{signed(c.real - c.sim, c.d)}{c.unit ? "%p" : ""}</b>
-              <div className="note">제출본: {c.simNature} · 1차(완전 표본 외) 실데이터 {fmt(c.primary, c.d)}{c.unit}</div>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  );
 }
 
 export default function Home() {
@@ -90,13 +49,23 @@ export default function Home() {
   const steps = [
     { what: "사전등록", c: tl.preregistration, note: "PREREGISTRATION.md · 데이터 다운로드 전" },
     { what: "코드 (결과 이전)", c: tl.code, note: "모델·백테스트·no-look-ahead 테스트" },
-    { what: "첫 결과", c: tl.results, note: "results/ 커밋 · 이후 파라미터 변경 없음" },
-    { what: "시연용 출력 추가", c: tl.weights_export, note: "비중 CSV · 웹 export (계산 불변)" },
+    { what: "첫 결과", c: tl.results, note: "results/ 첫 커밋 · 이후 파라미터 변경 없음" },
+    { what: "결과 재생성 · 시연용 출력", c: tl.weights_export, note: "Linux/CUDA 재실행 (첫 결과와 허용 오차 내) · 비중 CSV · 계산 불변" },
   ];
 
   return (
     <>
       <Nav />
+      <header className="banner" role="note" aria-label="연구 윤리 고지">
+        <div className="wrap">
+          <b>연구 윤리 고지 · 사전등록 재현 vs 시뮬레이션 파라미터</b>
+          <span>
+            제출본(30P 논문)의 수치는 {submission.metadata.nature}다 — “{submission.metadata.disclosure_ko}”.
+            실데이터 결과는 {dateTimeKo(tl.preregistration.date)}에 커밋한 사전등록(<code>{tl.preregistration.short}</code>)의 파라미터를 바꾸지 않고 산출했으며, 결과가 나빠도 그대로 보고한다.
+          </span>
+        </div>
+      </header>
+      <ModeProvider>
       <main>
         {/* 1. cover */}
         <section id="cover" className="slide cover" aria-labelledby="t-cover">
@@ -120,19 +89,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 2. comparison */}
+        {/* 2. dashboard */}
         <section id="compare" className="slide" aria-labelledby="t-compare">
           <div className="wrap">
-            <Eyebrow n={2}>제출본 vs 실데이터 · 제안 모델</Eyebrow>
-            <h2 id="t-compare">헤드라인 성과는 실데이터에서 재현되지 않았다</h2>
+            <Eyebrow n={2}>성과 대시보드 · 모드 전환</Eyebrow>
+            <h2 id="t-compare">제출본 시뮬레이션과 실데이터 재현을 같은 지표로 본다</h2>
             <p className="lead">
-              제출본과 같은 표본({submission.metadata.sample.start} → {submission.metadata.sample.end})의 {PERIOD_LABEL.secondary} 결과다.
-              제출본 수치는 시장 데이터에서 추정한 값이 아니라 시뮬레이션 입력·해석적 계산이다. 이 기간에는 세이프가드가 2015–16년에 표본 내라는 점도 함께 밝힌다.
+              위 탭으로 두 모드를 전환한다. 아래 누적자산 차트도 같은 모드를 따른다. 실데이터 모드에서 각 카드는 제출본 수치가 재현되었는지 표시한다.
             </p>
-            <CompareCards />
-            <p className="footnote" style={{ marginTop: "1rem" }}>
-              출처: <code>{performance.source.file}</code> @ <code>{performance.source.commit}</code> · 제출본 <code>{provenance.submission.repo}:{provenance.submission.path}</code> @ <code>{provenance.submission.commit.slice(0, 7)}</code>
-            </p>
+            <Dashboard />
           </div>
         </section>
 
@@ -140,10 +105,10 @@ export default function Home() {
         <section id="curves" className="slide" aria-labelledby="t-curves">
           <div className="wrap">
             <Eyebrow n={3}>누적자산</Eyebrow>
-            <h2 id="t-curves">6개 전략의 실데이터 누적자산</h2>
+            <h2 id="t-curves">누적자산: 제안 모델 · 60/40 · MVO · 동일가중</h2>
             <p className="lead">
-              {PERIOD_LABEL.primary}에서 제안 모델의 CAGR은 {pct(prim.proposed.cagr_pct)}로 동일가중({pct(prim.ew.cagr_pct)})보다 {cmpWord(prim.proposed.cagr_pct, prim.ew.cagr_pct)}고
-              MVO({pct(prim.mvo.cagr_pct)})보다 {cmpWord(prim.proposed.cagr_pct, prim.mvo.cagr_pct)}다. 세이프가드를 뺀 Chronos 절제 모델은 {pct(prim.ito_tsfm.cagr_pct)}다. 범례를 눌러 전략을 켜고 끌 수 있다.
+              실데이터 모드: {PERIOD_LABEL.primary}에서 제안 모델의 CAGR은 {pct(prim.proposed.cagr_pct)}로 동일가중({pct(prim.ew.cagr_pct)})보다 {cmpWord(prim.proposed.cagr_pct, prim.ew.cagr_pct)}고
+              MVO({pct(prim.mvo.cagr_pct)})보다 {cmpWord(prim.proposed.cagr_pct, prim.mvo.cagr_pct)}다. 시뮬레이션 모드는 제출본 CAGR이 함의하는 해석적 경로를 보여 준다. 범례를 눌러 전략을 켜고 끌 수 있고, 절제 모델 두 개도 추가할 수 있다.
             </p>
             <CurvesChart />
           </div>
@@ -156,7 +121,7 @@ export default function Home() {
             <h2 id="t-drag">이토 항등식 μ − g = ½σ²는 실데이터에서 성립한다</h2>
             <p className="lead">
               두 기간 6개 전략 모두에서 실측 항력과 ½σ²의 차이는 최대 {fmt(ds.maxGap, 3)}%p다 (확인 기준 {fmt(DRAG_TOLERANCE_PP, 2)}%p 이내).
-              다만 {PERIOD_LABEL.primary}에서 제안 모델의 항력은 {pct(prim.proposed.emp_drag_pct)}로 60/40({pct(prim["6040"].emp_drag_pct)})과의 차이가 {fmt(Math.abs(prim.proposed.emp_drag_pct - prim["6040"].emp_drag_pct))}%p다.
+              다만 {PERIOD_LABEL.primary}에서 제안 모델의 항력은 {pct(prim.proposed.emp_drag_pct)}로 60/40({pct(prim["6040"].emp_drag_pct)})과의 차이가 {fmt(Math.abs(prim.proposed.emp_drag_pct - prim["6040"].emp_drag_pct), 3)}%p다.
               항등식은 맞지만, 제출본이 가정한 항력 {pct(sub.analytic.theo_drag_pct)} 수준의 감소는 나타나지 않는다.
             </p>
             <div className="grid-2">
@@ -202,7 +167,7 @@ export default function Home() {
                   제출본의 비용 민감도 표는 같은 범위에서 {fmt(subC0 - subCMax)}%p 감소만을 가정했다.
                 </p>
                 <p style={{ marginBottom: 0 }}>
-                  비용을 빼기 전({c0}bp)에는 실데이터 제안 모델의 {PERIOD_LABEL.primary} 샤프가 {fmt(pc("primary", c0).sharpe)}로 벤치마크 중 최고({fmt(bestBench0.sharpe)}, {KO[bestBench0.id]})보다 {cmpWord(pc("primary", c0).sharpe, bestBench0.sharpe)}다.
+                  비용을 빼기 전({c0}bp)에는 실데이터 제안 모델의 {PERIOD_LABEL.primary} 샤프가 {fmt(pc("primary", c0).sharpe)}로 가장 높은 벤치마크인 {KO[bestBench0.id]}의 {fmt(bestBench0.sharpe)}보다 {cmpWord(pc("primary", c0).sharpe, bestBench0.sharpe)}다.
                   {pc("primary", c0).sharpe > bestBench0.sharpe && <> 예측 신호보다 <b>매매 빈도</b>가 성과를 잠식한다는 뜻이다.</>}
                 </p>
               </div>
@@ -270,6 +235,7 @@ export default function Home() {
           </div>
         </section>
       </main>
+      </ModeProvider>
     </>
   );
 }

@@ -62,13 +62,13 @@
    "proposed": {
     "emp_drag_pct": 0.6031,
     "theo_drag_pct": 0.6007,
-    "sigma_pct": 10.961
+    "sigma_pct": 10.9611
    }
   }
  },
  "source": {
   "file": "results/results.json",
-  "commit": "d3d3447",
-  "sha256": "7d159c9c02a5e5ce11a9399d45b74d3ed45c88ff716676372819fc31a5dc4738"
+  "commit": "0c15bd9",
+  "sha256": "6a35e3ab69b03da917b70d48d844bdc903c9eb1027797d030cd5e5a876bc68c7"
  }
 }

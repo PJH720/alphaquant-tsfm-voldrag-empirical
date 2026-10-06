@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 export const SECTIONS = [
   { id: "cover", label: "표지" },
-  { id: "compare", label: "제출본 vs 실데이터" },
+  { id: "compare", label: "대시보드" },
   { id: "curves", label: "누적자산" },
   { id: "drag", label: "변동성 항력" },
   { id: "crisis", label: "2020 팬데믹" },
