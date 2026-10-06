@@ -29,6 +29,8 @@ These were found while fetching data. At that point only coverage, row counts an
 ## Post-results additions (no parameter or result change)
 
 - 2026-10-07: `tests/test_data_reference.py` checks downloaded data against published values: SPY/QQQ/GLD calendar-year total returns 2016-2024 (±0.3%p), KOSPI year-end closes 2019-2024 (±0.01), VIX 2020-03-16 and USD/KRW 2020-03-19 (FRED), and that distributions are reflected in adjusted prices. All 34 checks pass on the data used for the first run. Data after 2024 is not covered.
+- 2026-10-07: `run.py` also writes `results/weights_proposed_primary_10bp.csv`: the proposed model's daily weights, cash included. This is an output-only addition; the calculation is unchanged. The committed file comes from the Linux/CUDA run (`results/cross_platform_ubuntu_cuda.md`: minor differences, within tolerance). The other committed `results/` files are left as they are.
+- 2026-10-07: `src/voldrag/export_web.py` exports the committed `results/` to `web/public/data/*.json` for the demo site. It also writes the submission bundle from the presentation repo and a provenance record. Only strategy-level outputs are exported: no raw prices and no per-asset daily returns.
 
 ## Cross-platform reproduction run
 
