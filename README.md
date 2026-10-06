@@ -51,6 +51,28 @@ uv run python -m voldrag.run     # downloads data (cached in data/raw), ~1–2 m
 
 Results: [`results/REPORT.md`](results/REPORT.md).
 
+## Demo site (`web/`)
+
+A static dashboard for the presentation: Next.js static export with Recharts. Every number on it comes from `web/public/data/*.json`, which `voldrag.export_web` generates from the committed `results/` and the submission bundle in the presentation repo. It shows no raw prices and no per-asset daily returns.
+
+Regenerate the data and run the site locally. The built `web/out` works offline; fonts are self-hosted.
+
+```bash
+uv run python -m voldrag.export_web          # results/ -> web/public/data/*.json (fetches the submission bundle via gh)
+cd web && pnpm i && pnpm build && npx serve out
+```
+
+To deploy to Vercel, use the `web/` directory as the project root. `web/vercel.json` sets framework nextjs, pnpm install and `pnpm build`.
+
+```bash
+cd web
+npx vercel login                 # once
+npx vercel link                  # create or link the project (Root Directory: web/)
+npx vercel deploy --prod         # same as: pnpm deploy
+```
+
+Alternatively, import the GitHub repo in the Vercel dashboard and set Root Directory = `web`, Framework = Next.js.
+
 ## Key findings (first pre-registered run, 2026-10-07)
 
 All figures are for the primary out-of-sample period 2017-01 → 2026-08 with 10bp costs, unless noted. The full tables are in the report.
