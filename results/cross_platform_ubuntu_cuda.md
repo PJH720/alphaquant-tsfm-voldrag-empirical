@@ -2,7 +2,7 @@
 
 This is an independent re-run of `python -m voldrag.run` on a second machine. It started from an empty `data/raw/` and `data/cache/` and an empty Hugging Face model cache, so all market data and the Chronos weights were downloaded fresh.
 - **Code:** commit `f180e94`. The pipeline code is `e280280` plus the CUDA device selection logged in `CHANGELOG.md`; no parameter change. (The run was made before rebasing onto `fe418e9`, which adds only tests and docs.)
-- **Committed outputs:** the files in `results/`, `DATA.md` and `data/manifest.json` are still the first results run. Only this comparison is new.
+- **Committed outputs:** when this comparison was written, `results/`, `DATA.md` and `data/manifest.json` were still the first results run. They were later regenerated from this run (CHANGELOG, Post-results additions); the first run's files remain at commit `d3d3447`, and the "first run" columns below refer to it.
 
 **Verdict: minor differences, within tolerance.**
 - No number in `results/REPORT.md` differs except in its last printed digit:

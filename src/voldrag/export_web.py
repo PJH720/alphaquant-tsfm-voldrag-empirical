@@ -93,7 +93,17 @@ def export_performance(results: dict, src: dict) -> None:
         "episodes": results["episodes"],
         "episode_windows": {k: {"start": s, "end": e} for k, (s, e) in C.EPISODES.items()},
         "source": src,
+        "exploratory_costs": _exploratory_costs(),
     })
+
+
+def _exploratory_costs() -> dict:
+    path = RESULTS / "exploratory_cost_sensitivity.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {"label": data["label"], "costs_bp": data["exploratory_costs_bp"],
+            "performance": {p: {c: v for c, v in costs.items() if int(c) in data["exploratory_costs_bp"]}
+                            for p, costs in data["performance"].items()},
+            "source": _source(path)}
 
 
 def export_curves() -> None:
@@ -131,7 +141,7 @@ def export_crisis_2020(results: dict, results_src: dict) -> None:
     wealth = (1.0 + window).cumprod()
     sig_path = RESULTS / "safeguard_signals.csv"
     signals = pd.read_csv(sig_path, index_col=0, parse_dates=True).loc[start:end]
-    w_path = RESULTS / f"weights_proposed_primary_{C.BASE_COST_BP}bp.csv"
+    w_path = RESULTS / f"weights_primary_{C.BASE_COST_BP}bp.csv"
     cash = pd.read_csv(w_path, index_col=0, parse_dates=True).loc[start:end, "CASH"]
     rows = []
     for d in wealth.index:
@@ -146,9 +156,8 @@ def export_crisis_2020(results: dict, results_src: dict) -> None:
         "submission_narrative": _paper_2020_narrative(),
         "sources": {"daily_returns": daily_src, "safeguard_signals": _source(sig_path),
                     "weights": _source(w_path), "episodes": results_src},
-        "weights_note": "The weights file was added after the first results run. It comes from the "
-                        "Linux/CUDA run documented in results/cross_platform_ubuntu_cuda.md "
-                        "(minor differences, within tolerance); all other figures are the committed results.",
+        "weights_note": "All results/ files, weights included, come from the Linux/CUDA run "
+                        "(results/cross_platform_ubuntu_cuda.md: minor differences from the first run, within tolerance).",
     })
 
 
@@ -204,7 +213,7 @@ def export_provenance(submission: dict) -> None:
     anchors = {}
     for role, (ref, how) in FIRST_COMMITS.items():
         anchors[role] = _commit_info(ref) if how == "rev" else _file_commit(ref, first=True)
-    anchors["weights_export"] = _file_commit(f"results/weights_proposed_primary_{C.BASE_COST_BP}bp.csv")
+    anchors["weights_export"] = _file_commit(f"results/weights_primary_{C.BASE_COST_BP}bp.csv", first=True)
     _write("provenance.json", {
         "repo": "PJH720/alphaquant-tsfm-voldrag-empirical",
         "submission_repo": SUBMISSION_REPO,

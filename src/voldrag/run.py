@@ -134,8 +134,9 @@ def write_outputs(md, perf, runs, boot, eps, signals, diagnostics, asset_stats) 
         daily = pd.DataFrame({k: v.net_returns for k, v in runs[period][C.BASE_COST_BP].items()})
         daily.to_csv(RESULTS / f"daily_returns_{period}_{C.BASE_COST_BP}bp.csv", float_format="%.8f")
     signals.to_csv(RESULTS / "safeguard_signals.csv", float_format="%.6f")
-    runs["primary"][C.BASE_COST_BP]["proposed"].weights.to_csv(
-        RESULTS / f"weights_proposed_primary_{C.BASE_COST_BP}bp.csv", float_format="%.8f")
+    for period in C.PERIODS:
+        runs[period][C.BASE_COST_BP]["proposed"].weights.to_csv(
+            RESULTS / f"weights_{period}_{C.BASE_COST_BP}bp.csv", float_format="%.8f")
     payload = {
         "performance": perf, "bootstrap_proposed_vs_mvo": boot, "episodes": eps,
         "asset_statistics_secondary": asset_stats.to_dict(orient="index"),
