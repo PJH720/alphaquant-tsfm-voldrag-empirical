@@ -20,6 +20,7 @@ These were found while fetching data. At that point only coverage, row counts an
 ## Code-level notes (no parameter change)
 
 - Leading rows without a strictly-earlier US/FX observation are trimmed (`data.load_market_data`). Missing values anywhere else still raise an error.
+- 2026-10-07, post-results code change (no parameter change): `ChronosMoments._pipeline()` now selects its device in the order cuda → mps → cpu. Previously it chose only between mps and cpu. dtype stays float32. This was added so the run can be reproduced independently on a Linux + NVIDIA GPU. On Apple Silicon it selects the same device as before.
 
 ## First results run
 

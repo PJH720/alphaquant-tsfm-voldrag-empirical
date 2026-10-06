@@ -75,7 +75,12 @@ class ChronosMoments:
         if self._pipe is None:
             from chronos import BaseChronosPipeline
 
-            device = "mps" if torch.backends.mps.is_available() else "cpu"
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif torch.backends.mps.is_available():
+                device = "mps"
+            else:
+                device = "cpu"
             self._pipe = BaseChronosPipeline.from_pretrained(
                 C.CHRONOS_MODEL, device_map=device, torch_dtype=torch.float32)
         return self._pipe
