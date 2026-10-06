@@ -20,7 +20,7 @@ These were found while fetching data. At that point only coverage, row counts an
 ## Code-level notes (no parameter change)
 
 - Leading rows without a strictly-earlier US/FX observation are trimmed (`data.load_market_data`). Missing values anywhere else still raise an error.
-- 2026-10-07, post-results code change (no parameter change): `ChronosMoments._pipeline()` now selects its device in the order cuda → mps → cpu. Previously it chose only between mps and cpu. dtype stays float32. This was added so the run can be reproduced independently on a Linux + NVIDIA GPU. On Apple Silicon it selects the same device as before.
+- 2026-10-07, post-results code change (no parameter change): `ChronosMoments._pipeline()` runs Chronos on CUDA when available, otherwise on the CPU. dtype stays float32.
 
 ## First results run
 
@@ -35,4 +35,4 @@ These were found while fetching data. At that point only coverage, row counts an
 - 2026-10-07 ≈ 02:20 KST: independent re-run on Ubuntu 24.04.5 + NVIDIA RTX 2060 SUPER (CUDA 13.0, torch 2.14.1+cu130), code commit `f180e94`. It started from empty data, Chronos and model-weight caches. No parameter change.
   - Verdict: **minor differences, within tolerance**. The largest gaps are |Δ CAGR| 0.0006 %p, |Δ Sharpe| 0.0001, |Δ turnover| 0.03 %p/y and |Δ p| 0.0003. Safeguard trigger dates are identical.
   - Cause: mostly Yahoo `Adj Close` rounding noise of about 1e-6 between requests. It affects only the six distribution-paying tickers; FRED, GLD and ^KQ11 are byte-identical. The Chronos device effect (CUDA vs CPU, about 1e-6 in μ̂ and σ̂) is roughly 10× smaller.
-  - The committed `results/`, `DATA.md` and `data/manifest.json` remain those of the original macOS run. Full comparison: `results/cross_platform_ubuntu_cuda.md`.
+  - The committed `results/`, `DATA.md` and `data/manifest.json` remain those of the first results run. Full comparison: `results/cross_platform_ubuntu_cuda.md`.

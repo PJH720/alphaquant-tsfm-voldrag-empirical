@@ -1,8 +1,8 @@
-# Cross-platform reproduction: Ubuntu + CUDA vs macOS M4 (MPS)
+# Independent reproduction: Ubuntu + CUDA vs the first results run
 
 This is an independent re-run of `python -m voldrag.run` on a second machine. It started from an empty `data/raw/` and `data/cache/` and an empty Hugging Face model cache, so all market data and the Chronos weights were downloaded fresh.
 - **Code:** commit `f180e94`. The pipeline code is `e280280` plus the CUDA device selection logged in `CHANGELOG.md`; no parameter change. (The run was made before rebasing onto `fe418e9`, which adds only tests and docs.)
-- **Committed outputs:** the files in `results/`, `DATA.md` and `data/manifest.json` are still the original macOS run. Only this comparison is new.
+- **Committed outputs:** the files in `results/`, `DATA.md` and `data/manifest.json` are still the first results run. Only this comparison is new.
 
 **Verdict: minor differences, within tolerance.**
 - No number in `results/REPORT.md` differs except in its last printed digit:
@@ -14,18 +14,18 @@ This is an independent re-run of `python -m voldrag.run` on a second machine. It
 
 ## Environment
 
-| | Original run | This run |
-| --- | --- | --- |
-| Machine | Apple M4, macOS | Intel Xeon E5-2697 v3 + NVIDIA GeForce RTX 2060 SUPER (8 GB, sm_75) |
-| OS | macOS | Ubuntu 24.04.5 LTS, kernel 7.0.0-31-generic |
-| Chronos device | `mps`, float32 | `cuda:0`, float32 (logged from the loaded pipeline's parameters) |
-| Driver / CUDA | n/a | NVIDIA driver 580.178.04, CUDA 13.0 (torch build `cu130`), cuDNN 9.24 |
-| Python / torch | from `uv.lock` | Python 3.12.3, torch 2.14.1+cu130 |
-| Key packages | from `uv.lock` | yfinance 1.7.0, pandas 3.0.6, pyarrow 25.0.1, cvxpy 1.9.3, clarabel 0.11.1 |
-| Data fetched | 2026-10-07 ≈ 01:58 KST | 2026-10-07 ≈ 02:20 KST |
-| Wall time | ~30 s | 101 s (including data and weight downloads; Chronos inference 55 s) |
+| | This run |
+| --- | --- |
+| Machine | Intel Xeon E5-2697 v3 + NVIDIA GeForce RTX 2060 SUPER (8 GB, sm_75) |
+| OS | Ubuntu 24.04.5 LTS, kernel 7.0.0-31-generic |
+| Chronos device | `cuda:0`, float32 (logged from the loaded pipeline's parameters) |
+| Driver / this run | NVIDIA driver 580.178.04, CUDA 13.0 (torch build `cu130`), cuDNN 9.24 |
+| Python / torch | Python 3.12.3, torch 2.14.1+cu130 |
+| Key packages | yfinance 1.7.0, pandas 3.0.6, pyarrow 25.0.1, cvxpy 1.9.3, clarabel 0.11.1 |
+| Data fetched | 2026-10-07 ≈ 02:20 KST |
+| Wall time | 101 s (including data and weight downloads; Chronos inference 55 s) |
 
-The autoencoder safeguard trains on the CPU in both runs: arm64 on the Mac, x86-64 here.
+The autoencoder safeguard trains on the CPU (x86-64).
 
 ## 1. Data: `data/manifest.json`
 
@@ -53,11 +53,11 @@ This is not a revision of the data. Yahoo's `Adj Close` for distribution-paying 
 
 The freshly downloaded data passes all 34 reference checks in `tests/test_data_reference.py`, and all 45 tests pass on this machine.
 
-The raw files from the Mac run are not committed (vendor data is not redistributed), so the Mac's exact values cannot be compared directly. The comparison above sets the size of the noise.
+The raw files of the first run are not committed (vendor data is not redistributed), so its exact input values cannot be compared directly. The comparison above sets the size of the noise.
 
 ## 2. Results: `results/results.json`
 
-The largest absolute difference (CUDA − Mac) over all 2 periods × 3 cost levels × 6 strategies:
+The largest absolute difference (this run − first run) over all 2 periods × 3 cost levels × 6 strategies:
 
 | Metric | max \|Δ\| | Where |
 | --- | ---: | --- |
@@ -70,14 +70,14 @@ Among the benchmarks, `6040` and `ew` have Δ = 0 in CAGR, Sharpe and turnover i
 
 ### Bootstrap, Sharpe(proposed) − Sharpe(MVO)
 
-| Period | Δ Sharpe Mac | Δ Sharpe CUDA | p Mac | p CUDA |
+| Period | Δ Sharpe first run | Δ Sharpe this run | p first run | p this run |
 | --- | ---: | ---: | ---: | ---: |
 | primary | -0.0128 | -0.0129 | 0.9584 | 0.9583 |
 | secondary | -0.0501 | -0.0501 | 0.8147 | 0.8144 |
 
 ### Crisis episodes (primary, 10bp)
 
-| Episode | | Mac | CUDA |
+| Episode | | First run | This run |
 | --- | --- | --- | --- |
 | 2020_pandemic | first trigger / days β>0 / max β | 2020-02-03 / 54 / 1.00 | 2020-02-03 / 54 / 1.00 |
 | | mean cash weight | 69.435% | 69.434% |
@@ -96,7 +96,7 @@ The other strategies' episode returns and MDDs agree to within 0.0004 %p.
 
 ## 3. Attribution: data vs device
 
-The Chronos cache (`data/cache/*.parquet`) is gitignored, so the Mac run's μ̂ and σ̂ are not available. MPS vs CUDA therefore cannot be compared directly. Instead I measured the device effect on identical data:
+The Chronos cache (`data/cache/*.parquet`) is gitignored, so the first run's μ̂ and σ̂ are not available for a direct comparison. Instead I measured the device effect on identical data:
 
 | Comparison (same data, all 611 decision dates × 7 assets) | max \|Δμ̂\| | median \|Δμ̂\| | max \|Δσ̂\| | identical cells |
 | --- | ---: | ---: | ---: | ---: |
@@ -110,11 +110,11 @@ Next I re-ran the full backtest on the same data with the CPU Chronos cache in p
 | Effect on metrics | max \|Δ CAGR %\| | max \|Δ Sharpe\| | max \|Δ MDD %\| | max \|Δ turnover %/y\| | bootstrap p |
 | --- | ---: | ---: | ---: | ---: | --- |
 | Device only (CUDA → CPU Chronos, same data) | 0.0001 | 0 | 0 | 0.0039 | unchanged (0.9583) |
-| Observed (Mac/MPS run → this CUDA run) | 0.0006 | 0.0001 | 0.0001 | 0.0315 | 0.9584 → 0.9583 |
+| Observed (first run → this CUDA run) | 0.0006 | 0.0001 | 0.0001 | 0.0315 | 0.9584 → 0.9583 |
 
 - **Data effect.** The strategies with no Chronos input (`6040`, `ew`, `mvo`, `ito_hist`) also move: in their daily returns, in turnover, and in the asset statistics such as JB. This can only come from the different Yahoo inputs, and it is the same size as the request-to-request Yahoo noise measured in §1.
-- **Device effect.** It explains roughly a tenth of the turnover and CAGR residual in the Chronos strategies. This assumes that MPS-vs-CUDA float32 differences are of the same order as the measured CPU-vs-CUDA ones; MPS itself could not be tested on this machine.
-- **Safeguard.** The 1.4e-3 differences in reconstruction error come from the state vector, which is built from the slightly different returns, and possibly from training on arm64 vs x86-64 CPUs. The warm-up MSE and every trigger date are identical.
+- **Device effect.** It explains roughly a tenth of the turnover and CAGR residual in the Chronos strategies. This assumes that the first run's device differs from CUDA by the same order as the measured CPU-vs-CUDA difference.
+- **Safeguard.** The 1.4e-3 differences in reconstruction error come from the state vector, which is built from the slightly different returns, and possibly from CPU floating-point differences in training. The warm-up MSE and every trigger date are identical.
 
 ## Verdict
 
@@ -131,7 +131,7 @@ A future re-run cannot be byte-exact without the original raw files: Yahoo's `Ad
 
 ## Full comparison table
 
-| Period | Cost | Strategy | CAGR % Mac | CAGR % CUDA | Δ | Sharpe Mac | Sharpe CUDA | Δ | MDD % Mac | MDD % CUDA | Δ | Turnover %/y Mac | Turnover %/y CUDA | Δ |
+| Period | Cost | Strategy | CAGR % first run | CAGR % this run | Δ | Sharpe first run | Sharpe this run | Δ | MDD % first run | MDD % this run | Δ | Turnover %/y first run | Turnover %/y this run | Δ |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | primary | 0bp | `6040` | 10.4082 | 10.4082 | +0.0000 | 0.7752 | 0.7752 | +0.0000 | -19.1800 | -19.1799 | +0.0001 | 20.7237 | 20.7237 | +0.0000 |
 | primary | 0bp | `ew` | 12.9816 | 12.9816 | +0.0000 | 0.9805 | 0.9805 | +0.0000 | -17.5011 | -17.5011 | +0.0000 | 39.2254 | 39.2254 | +0.0000 |
