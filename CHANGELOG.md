@@ -29,3 +29,10 @@ These were found while fetching data. At that point only coverage, row counts an
 ## Post-results additions (no parameter or result change)
 
 - 2026-10-07: `tests/test_data_reference.py` checks downloaded data against published values: SPY/QQQ/GLD calendar-year total returns 2016-2024 (±0.3%p), KOSPI year-end closes 2019-2024 (±0.01), VIX 2020-03-16 and USD/KRW 2020-03-19 (FRED), and that distributions are reflected in adjusted prices. All 34 checks pass on the data used for the first run. Data after 2024 is not covered.
+
+## Cross-platform reproduction run
+
+- 2026-10-07 ≈ 02:20 KST: independent re-run on Ubuntu 24.04.5 + NVIDIA RTX 2060 SUPER (CUDA 13.0, torch 2.14.1+cu130), code commit `f180e94`. It started from empty data, Chronos and model-weight caches. No parameter change.
+  - Verdict: **minor differences, within tolerance**. The largest gaps are |Δ CAGR| 0.0006 %p, |Δ Sharpe| 0.0001, |Δ turnover| 0.03 %p/y and |Δ p| 0.0003. Safeguard trigger dates are identical.
+  - Cause: mostly Yahoo `Adj Close` rounding noise of about 1e-6 between requests. It affects only the six distribution-paying tickers; FRED, GLD and ^KQ11 are byte-identical. The Chronos device effect (CUDA vs CPU, about 1e-6 in μ̂ and σ̂) is roughly 10× smaller.
+  - The committed `results/`, `DATA.md` and `data/manifest.json` remain those of the original macOS run. Full comparison: `results/cross_platform_ubuntu_cuda.md`.
