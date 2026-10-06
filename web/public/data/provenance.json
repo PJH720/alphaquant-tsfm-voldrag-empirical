@@ -1,0 +1,84 @@
+{
+ "repo": "PJH720/alphaquant-tsfm-voldrag-empirical",
+ "submission_repo": "PJH720/alphaquant-tsfm-voldrag",
+ "timeline": {
+  "preregistration": {
+   "sha": "011f9d86f658e5f8a12667d71814b0d99a99a96d",
+   "short": "011f9d8",
+   "date": "2026-10-07T01:52:14+09:00",
+   "subject": "docs: pre-register hyperparameters before any data download or backtest"
+  },
+  "code": {
+   "sha": "930abbd119b87c86f6c2f6722853bd7545a548b9",
+   "short": "930abbd",
+   "date": "2026-10-07T02:04:17+09:00",
+   "subject": "feat: models, backtest engine, metrics, orchestrator and tests (pre-results)"
+  },
+  "results": {
+   "sha": "d3d34470259cebce5af8ff408e4c1114373a4c93",
+   "short": "d3d3447",
+   "date": "2026-10-07T02:06:22+09:00",
+   "subject": "results: first pre-registered run on real data"
+  },
+  "weights_export": {
+   "sha": "0b2dd4ee8525536544a25299a068b1f95df38df7",
+   "short": "0b2dd4e",
+   "date": "2026-10-07T02:54:01+09:00",
+   "subject": "feat: export proposed-model weights and web JSON for the demo site"
+  }
+ },
+ "head": {
+  "sha": "0b2dd4ee8525536544a25299a068b1f95df38df7",
+  "short": "0b2dd4e",
+  "date": "2026-10-07T02:54:01+09:00",
+  "subject": "feat: export proposed-model weights and web JSON for the demo site"
+ },
+ "amendments": [
+  {
+   "title": "Data start 2013-01-02 → 2012-12-03",
+   "summary": "(`config.DATA_START`)",
+   "details": [
+    "§3 says the data start is chosen \"so the W=504 windows exist at 2015-01\". From 2013-01-02 there are only ~492 KRX trading days before 2015-01-02, which contradicts that stated intent.",
+    "With the earliest fetched date (2012-12-03), 508 return rows precede 2015-01-02. The first two rows are dropped because no US/FX observation strictly precedes them."
+   ]
+  },
+  {
+   "title": "US HY OAS → Moody's Baa−10Y spread",
+   "summary": "(state-vector feature 11)",
+   "details": [
+    "FRED now serves `BAMLH0A0HYM2` only from 2023-10-09 (ICE licensing). That leaves the warm-up and most of the sample empty.",
+    "Replaced by FRED `BAA10Y`, the long-history credit-spread series on FRED (2012-12-03 onward). It is lagged strictly before each KRX date like the other US series."
+   ]
+  },
+  {
+   "title": "KOSDAQ 150 index before 2015-10-01 → KOSDAQ composite (`^KQ11`)",
+   "summary": "",
+   "details": [
+    "§2 planned the KOSDAQ 150 index from pykrx. KRX index endpoints now require a login: pykrx and FinanceDataReader both fail with `LOGOUT`/`KeyError`.",
+    "The composite is the closest freely available series. It is a price index, so dividends are omitted only for 2012-12 to 2015-10."
+   ]
+  },
+  {
+   "title": "VKOSPI",
+   "summary": "unavailable for the same KRX-login reason. Replaced by KOSPI 200 21-day realized volatility, exactly as pre-registered in §6. Listed here for completeness",
+   "details": []
+  }
+ ],
+ "data_reference_tests": {
+  "command": "uv run pytest tests/test_data_reference.py",
+  "passed": 34,
+  "failed": 0,
+  "total": 34,
+  "summary": "34 passed in 0.56s",
+  "ran_at": "2026-10-07T02:54:08+09:00"
+ },
+ "submission": {
+  "repo": "PJH720/alphaquant-tsfm-voldrag",
+  "path": "web_export/submission_simulation.json",
+  "commit": "7d90fbc426228473ef3ba3e11ab53bc22755e87f",
+  "commit_date": "2026-10-06T17:25:52Z",
+  "sha256": "4d771c0adcb52493e2303ec1d781a3cd1ef5636bc57a0ec9d4ca2777f8fcfbc3"
+ },
+ "run_command": "uv sync && uv run python -m voldrag.run",
+ "reproduction_report": "results/cross_platform_ubuntu_cuda.md"
+}

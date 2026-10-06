@@ -1,0 +1,74 @@
+{
+ "cost_bp": 10,
+ "drag": {
+  "primary": {
+   "6040": {
+    "emp_drag_pct": 0.6765,
+    "theo_drag_pct": 0.6742,
+    "sigma_pct": 11.6121
+   },
+   "ew": {
+    "emp_drag_pct": 0.6796,
+    "theo_drag_pct": 0.6767,
+    "sigma_pct": 11.6337
+   },
+   "mvo": {
+    "emp_drag_pct": 0.7879,
+    "theo_drag_pct": 0.7837,
+    "sigma_pct": 12.5199
+   },
+   "ito_hist": {
+    "emp_drag_pct": 0.8365,
+    "theo_drag_pct": 0.8328,
+    "sigma_pct": 12.9058
+   },
+   "ito_tsfm": {
+    "emp_drag_pct": 0.791,
+    "theo_drag_pct": 0.7875,
+    "sigma_pct": 12.5496
+   },
+   "proposed": {
+    "emp_drag_pct": 0.6718,
+    "theo_drag_pct": 0.6686,
+    "sigma_pct": 11.5636
+   }
+  },
+  "secondary": {
+   "6040": {
+    "emp_drag_pct": 0.6326,
+    "theo_drag_pct": 0.6304,
+    "sigma_pct": 11.2282
+   },
+   "ew": {
+    "emp_drag_pct": 0.6127,
+    "theo_drag_pct": 0.6102,
+    "sigma_pct": 11.0468
+   },
+   "mvo": {
+    "emp_drag_pct": 0.69,
+    "theo_drag_pct": 0.6868,
+    "sigma_pct": 11.7199
+   },
+   "ito_hist": {
+    "emp_drag_pct": 0.741,
+    "theo_drag_pct": 0.738,
+    "sigma_pct": 12.1494
+   },
+   "ito_tsfm": {
+    "emp_drag_pct": 0.7014,
+    "theo_drag_pct": 0.6988,
+    "sigma_pct": 11.8223
+   },
+   "proposed": {
+    "emp_drag_pct": 0.6031,
+    "theo_drag_pct": 0.6007,
+    "sigma_pct": 10.961
+   }
+  }
+ },
+ "source": {
+  "file": "results/results.json",
+  "commit": "d3d3447",
+  "sha256": "7d159c9c02a5e5ce11a9399d45b74d3ed45c88ff716676372819fc31a5dc4738"
+ }
+}

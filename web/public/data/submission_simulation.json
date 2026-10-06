@@ -1,0 +1,394 @@
+{
+  "metadata": {
+    "nature": "simulation parameters (NOT a historical backtest)",
+    "disclosure_ko": "본 연구의 수치는 시뮬레이션 파라미터 기반이며, 실데이터 재현은 후속 과제",
+    "generated_at": "2026-10-06T17:25:47+00:00",
+    "source_repo": "PJH720/alphaquant-tsfm-voldrag",
+    "source_commit": "a26f81c276404ab70cf6b731c7269b127a720e1e",
+    "source_data_commit": "c3065c53119f180cf14e14b2a965c7efc54d2aba",
+    "source_data_dirty": false,
+    "source_files": [
+      "data/backtest_results.json",
+      "data/simulation_results.json"
+    ],
+    "sample": {
+      "start": "2015-01-02",
+      "end": "2026-08-31",
+      "trading_days": 2868
+    },
+    "cost_basis_note": "Core Tables (Table 4-1, Table 2) are net of 10bps transaction costs unless noted. Table 4-5 presents 0bp gross to 20bp sensitivity.",
+    "known_caveats": [
+      "Sharpe is computed as (CAGR - 2%) / sigma, while eq. (33b) in the text uses the arithmetic mean.",
+      "Gross/Net labeling conflict: cost_basis_note says core tables are net of 10bp, but the 30P table footnote calls 14.82% / 1.68 the Gross figures (= the 0bp row here).",
+      "See audit/verification_ledger.md for the full list of open defects."
+    ]
+  },
+  "labels": {
+    "parameter": {
+      "ko": "시뮬레이션 입력 파라미터 (실측 추정치 아님)",
+      "en": "Simulation input parameter (hardcoded constant, not estimated from market data)",
+      "examples": "전략별 μ, σ, 자산별 왜도·첨도"
+    },
+    "analytic": {
+      "ko": "파라미터로부터의 해석적 계산",
+      "en": "Analytic implication of the parameters",
+      "examples": "CAGR (= μ − ½σ²), 변동성 항력, 10년 복리 손실액, JB 통계량"
+    },
+    "monte_carlo": {
+      "ko": "파라미터 기반 GBM 시뮬레이션 결과 (10,000 경로, seed 고정)",
+      "en": "GBM Monte Carlo result from the parameters (10,000 paths, fixed seed)",
+      "examples": "성장률·10년 자산·MDD·샤프의 분포, 제안 모델 우위 경로 비율"
+    },
+    "illustrative_scenario": {
+      "ko": "예시적 시나리오 서술 (시뮬레이션도, 역사적 백테스트도 아님)",
+      "en": "Illustrative scenario narrative (neither simulation output nor historical backtest)",
+      "examples": "2020년 팬데믹·2022년 긴축기 방어, 세이프가드 발동일, 거래비용·리밸런싱 민감도"
+    }
+  },
+  "strategies": {
+    "benchmark_6040": {
+      "name": "전통적 60/40",
+      "parameters": {
+        "nature": "parameter",
+        "mu_arith_pct": 8.51,
+        "sigma_pct": 11.45,
+        "mdd_pct": -24.78
+      },
+      "analytic": {
+        "nature": "analytic",
+        "cagr_pct": 7.85,
+        "sharpe": 0.51,
+        "theo_drag_pct": 0.66,
+        "loss_10y_eok": -13.39
+      }
+    },
+    "equal_weight": {
+      "name": "동일가중 (EW 1/N)",
+      "parameters": {
+        "nature": "parameter",
+        "mu_arith_pct": 9.25,
+        "sigma_pct": 12.86,
+        "mdd_pct": -26.15
+      },
+      "analytic": {
+        "nature": "analytic",
+        "cagr_pct": 8.42,
+        "sharpe": 0.5,
+        "theo_drag_pct": 0.83,
+        "loss_10y_eok": -17.79
+      }
+    },
+    "mvo": {
+      "name": "마코위츠 MVO",
+      "parameters": {
+        "nature": "parameter",
+        "mu_arith_pct": 10.02,
+        "sigma_pct": 13.28,
+        "mdd_pct": -28.65
+      },
+      "analytic": {
+        "nature": "analytic",
+        "cagr_pct": 9.14,
+        "sharpe": 0.54,
+        "theo_drag_pct": 0.88,
+        "loss_10y_eok": -20.05
+      }
+    },
+    "proposed": {
+      "name": "제안 모델 (TSFM-Itô)",
+      "parameters": {
+        "nature": "parameter",
+        "mu_arith_pct": 15.11,
+        "sigma_pct": 7.63,
+        "mdd_pct": -8.34
+      },
+      "analytic": {
+        "nature": "analytic",
+        "cagr_pct": 14.82,
+        "sharpe": 1.68,
+        "theo_drag_pct": 0.29,
+        "loss_10y_eok": -10.17
+      }
+    }
+  },
+  "monte_carlo": {
+    "nature": "monte_carlo",
+    "seed": 20261007,
+    "n_paths": 10000,
+    "years": 11.381,
+    "shocks": "iid N(0,1), independent across strategies",
+    "strategies": {
+      "benchmark_6040": {
+        "name": "전통적 60/40",
+        "theoretical_g_pct": 7.8545,
+        "mc_g_mean_pct": 7.9284,
+        "mc_g_se_pct": 0.0335,
+        "wealth_10y": {
+          "unit": "억원 (principal 100)",
+          "mean": 235.69,
+          "median": 221.57,
+          "p05": 121.84,
+          "p95": 397.22
+        },
+        "mdd_p50_pct": -21.0845,
+        "sharpe_p50": 0.574
+      },
+      "equal_weight": {
+        "name": "동일가중 (EW 1/N)",
+        "theoretical_g_pct": 8.4231,
+        "mc_g_mean_pct": 8.4098,
+        "mc_g_se_pct": 0.0379,
+        "wealth_10y": {
+          "unit": "억원 (principal 100)",
+          "mean": 251.75,
+          "median": 231.63,
+          "p05": 119.01,
+          "p95": 451.58
+        },
+        "mdd_p50_pct": -23.8216,
+        "sharpe_p50": 0.56
+      },
+      "mvo": {
+        "name": "마코위츠 MVO",
+        "theoretical_g_pct": 9.1382,
+        "mc_g_mean_pct": 9.1299,
+        "mc_g_se_pct": 0.0395,
+        "wealth_10y": {
+          "unit": "억원 (principal 100)",
+          "mean": 272.2,
+          "median": 248.63,
+          "p05": 124.73,
+          "p95": 496.83
+        },
+        "mdd_p50_pct": -24.1967,
+        "sharpe_p50": 0.601
+      },
+      "proposed": {
+        "name": "제안 모델 (TSFM-Itô)",
+        "theoretical_g_pct": 14.8189,
+        "mc_g_mean_pct": 14.7809,
+        "mc_g_se_pct": 0.0227,
+        "wealth_10y": {
+          "unit": "억원 (principal 100)",
+          "mean": 451.55,
+          "median": 437.87,
+          "p05": 293.85,
+          "p95": 654.34
+        },
+        "mdd_p50_pct": -8.6211,
+        "sharpe_p50": 1.713
+      }
+    },
+    "proposed_vs_mvo": {
+      "share_paths_proposed_growth_higher": 0.8954
+    }
+  },
+  "illustrative_scenario": {
+    "nature": "illustrative_scenario",
+    "note": "Hardcoded constants in scripts/calculate_empirical_metrics.py. Do not present as simulation output or historical backtest.",
+    "regimes": [
+      {
+        "name": "구간 I: 저금리 성장기",
+        "period": "2015.01 ~ 2019.12",
+        "years": 5.0,
+        "benchmark_6040": {
+          "cagr": 8.1,
+          "sigma": 8.92,
+          "mdd": -9.45
+        },
+        "equal_weight": {
+          "cagr": 8.85,
+          "sigma": 10.15,
+          "mdd": -11.2
+        },
+        "mvo": {
+          "cagr": 10.45,
+          "sigma": 10.85,
+          "mdd": -12.15
+        },
+        "proposed": {
+          "cagr": 13.95,
+          "sigma": 6.85,
+          "mdd": -5.12
+        }
+      },
+      {
+        "name": "구간 II: 팬데믹·유동성기",
+        "period": "2020.01 ~ 2021.12",
+        "years": 2.0,
+        "benchmark_6040": {
+          "cagr": 13.3,
+          "sigma": 15.2,
+          "mdd": -19.45
+        },
+        "equal_weight": {
+          "cagr": 14.9,
+          "sigma": 17.45,
+          "mdd": -22.38
+        },
+        "mvo": {
+          "cagr": 14.95,
+          "sigma": 18.9,
+          "mdd": -24.81
+        },
+        "proposed": {
+          "cagr": 20.0,
+          "sigma": 8.45,
+          "mdd": -4.12
+        }
+      },
+      {
+        "name": "구간 III: 고인플레·긴축기",
+        "period": "2022.01 ~ 2022.12",
+        "years": 1.0,
+        "benchmark_6040": {
+          "cagr": -16.92,
+          "sigma": 14.28,
+          "mdd": -20.15
+        },
+        "equal_weight": {
+          "cagr": -14.85,
+          "sigma": 15.1,
+          "mdd": -19.8
+        },
+        "mvo": {
+          "cagr": -18.42,
+          "sigma": 16.85,
+          "mdd": -22.65
+        },
+        "proposed": {
+          "cagr": 5.34,
+          "sigma": 6.45,
+          "mdd": -5.82
+        }
+      },
+      {
+        "name": "구간 IV: AI랠리·고금리기",
+        "period": "2023.01 ~ 2026.06",
+        "years": 3.5,
+        "benchmark_6040": {
+          "cagr": 12.65,
+          "sigma": 10.45,
+          "mdd": -10.25
+        },
+        "equal_weight": {
+          "cagr": 11.85,
+          "sigma": 11.8,
+          "mdd": -11.5
+        },
+        "mvo": {
+          "cagr": 13.55,
+          "sigma": 12.1,
+          "mdd": -11.9
+        },
+        "proposed": {
+          "cagr": 16.15,
+          "sigma": 7.92,
+          "mdd": -6.85
+        }
+      }
+    ],
+    "cost_sensitivity": [
+      {
+        "cost_bp": 0,
+        "label": "0 bp (Gross)",
+        "benchmark_6040": {
+          "cagr_pct": 7.85,
+          "sharpe": 0.51
+        },
+        "equal_weight": {
+          "cagr_pct": 8.42,
+          "sharpe": 0.5
+        },
+        "mvo": {
+          "cagr_pct": 9.14,
+          "sharpe": 0.54
+        },
+        "proposed": {
+          "cagr_pct": 14.82,
+          "sharpe": 1.68
+        }
+      },
+      {
+        "cost_bp": 5,
+        "label": "5 bp (대형 기금)",
+        "benchmark_6040": {
+          "cagr_pct": 7.83,
+          "sharpe": 0.51
+        },
+        "equal_weight": {
+          "cagr_pct": 8.4,
+          "sharpe": 0.5
+        },
+        "mvo": {
+          "cagr_pct": 8.98,
+          "sharpe": 0.53
+        },
+        "proposed": {
+          "cagr_pct": 14.73,
+          "sharpe": 1.67
+        }
+      },
+      {
+        "cost_bp": 10,
+        "label": "10 bp (일반 기관 - Baseline)",
+        "benchmark_6040": {
+          "cagr_pct": 7.8,
+          "sharpe": 0.51
+        },
+        "equal_weight": {
+          "cagr_pct": 8.38,
+          "sharpe": 0.49
+        },
+        "mvo": {
+          "cagr_pct": 8.81,
+          "sharpe": 0.51
+        },
+        "proposed": {
+          "cagr_pct": 14.63,
+          "sharpe": 1.65
+        }
+      },
+      {
+        "cost_bp": 15,
+        "label": "15 bp (보수적 시장)",
+        "benchmark_6040": {
+          "cagr_pct": 7.78,
+          "sharpe": 0.5
+        },
+        "equal_weight": {
+          "cagr_pct": 8.36,
+          "sharpe": 0.49
+        },
+        "mvo": {
+          "cagr_pct": 8.64,
+          "sharpe": 0.5
+        },
+        "proposed": {
+          "cagr_pct": 14.54,
+          "sharpe": 1.64
+        }
+      },
+      {
+        "cost_bp": 20,
+        "label": "20 bp (고비용 환경)",
+        "benchmark_6040": {
+          "cagr_pct": 7.75,
+          "sharpe": 0.5
+        },
+        "equal_weight": {
+          "cagr_pct": 8.34,
+          "sharpe": 0.49
+        },
+        "mvo": {
+          "cagr_pct": 8.47,
+          "sharpe": 0.48
+        },
+        "proposed": {
+          "cagr_pct": 14.44,
+          "sharpe": 1.63
+        }
+      }
+    ]
+  }
+}
