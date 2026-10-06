@@ -20,3 +20,7 @@ These were found while fetching data. At that point only coverage, row counts an
 ## Code-level notes (no parameter change)
 
 - Leading rows without a strictly-earlier US/FX observation are trimmed (`data.load_market_data`). Missing values anywhere else still raise an error.
+
+## First results run
+
+- 2026-10-07 02:05 KST: first full run of `python -m voldrag.run` on code commit `930abbd`. No parameter or code changes after this run. Extreme 2026 KOSPI moves (e.g. +24% on 2026-07-31) were checked across 069500.KS, 102110.KS and ^KS11 and kept as genuine market data.
