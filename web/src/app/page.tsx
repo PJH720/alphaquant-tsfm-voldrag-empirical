@@ -1,6 +1,8 @@
 import Dashboard from "@/components/Dashboard";
 import { ModeProvider } from "@/components/Mode";
 import Nav from "@/components/Nav";
+import LiveLab from "@/components/LiveSimulator";
+import { sectionNumber, type SectionId } from "@/lib/sections";
 import { CostCharts, CrisisCharts, CurvesChart, DragScatter, ErgodicityBars, SignificancePlot } from "@/components/Charts";
 import { DRAG_TOLERANCE_PP, cmpWord, dragStats } from "@/lib/derived";
 import {
@@ -18,7 +20,8 @@ function Status({ ok, okText = "확인됨", failText = "재현 안 됨" }: { ok:
     : <span className="chip chip-fail"><span aria-hidden="true">✕</span>{failText}</span>;
 }
 
-function Eyebrow({ n, children }: { n: number; children: React.ReactNode }) {
+function Eyebrow({ id, children }: { id: SectionId; children: React.ReactNode }) {
+  const n = sectionNumber(id);
   return <div className="eyebrow"><span className="num">{String(n).padStart(2, "0")}</span><span>·</span>{children}</div>;
 }
 
@@ -70,7 +73,7 @@ export default function Home() {
         {/* 1. cover */}
         <section id="cover" className="slide cover" aria-labelledby="t-cover">
           <div className="wrap">
-            <Eyebrow n={1}>2026 연합 경제 학술제 본선 · 실데이터 재현</Eyebrow>
+            <Eyebrow id="cover">2026 연합 경제 학술제 본선 · 실데이터 재현</Eyebrow>
             <h1 id="t-cover">{PAPER_TITLE}</h1>
             <p className="sub">
               시뮬레이션 파라미터로 작성한 제출본과, 하이퍼파라미터를 먼저 고정한 뒤 실제 시장 데이터로 다시 돌린 결과를 같은 기준에서 나란히 놓는다.
@@ -92,7 +95,7 @@ export default function Home() {
         {/* 2. dashboard */}
         <section id="compare" className="slide" aria-labelledby="t-compare">
           <div className="wrap">
-            <Eyebrow n={2}>성과 대시보드 · 모드 전환</Eyebrow>
+            <Eyebrow id="compare">성과 대시보드 · 모드 전환</Eyebrow>
             <h2 id="t-compare">제출본 시뮬레이션과 실데이터 재현을 같은 지표로 본다</h2>
             <p className="lead">
               위 탭으로 두 모드를 전환한다. 아래 누적자산 차트도 같은 모드를 따른다. 실데이터 모드에서 각 카드는 제출본 수치가 재현되었는지 표시한다.
@@ -101,10 +104,19 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 3. curves */}
+        {/* 3. live lab */}
+        <section id="live" className="slide" aria-labelledby="t-live">
+          <div className="wrap">
+            <Eyebrow id="live">실시간 GPU 실험실 · 탐색적 분석</Eyebrow>
+            <h2 id="t-live">파라미터를 움직이면 연구실 워크스테이션이 실시간으로 다시 계산한다</h2>
+            <LiveLab />
+          </div>
+        </section>
+
+        {/* 4. curves */}
         <section id="curves" className="slide" aria-labelledby="t-curves">
           <div className="wrap">
-            <Eyebrow n={3}>누적자산</Eyebrow>
+            <Eyebrow id="curves">누적자산</Eyebrow>
             <h2 id="t-curves">누적자산: 제안 모델 · 60/40 · MVO · 동일가중</h2>
             <p className="lead">
               실데이터 모드: {PERIOD_LABEL.primary}에서 제안 모델의 CAGR은 {pct(prim.proposed.cagr_pct)}로 동일가중({pct(prim.ew.cagr_pct)})보다 {cmpWord(prim.proposed.cagr_pct, prim.ew.cagr_pct)}고
@@ -117,7 +129,7 @@ export default function Home() {
         {/* 4. drag */}
         <section id="drag" className="slide" aria-labelledby="t-drag">
           <div className="wrap">
-            <Eyebrow n={4}>변동성 항력 검증 <Status ok={ds.confirmed} /></Eyebrow>
+            <Eyebrow id="drag">변동성 항력 검증 <Status ok={ds.confirmed} /></Eyebrow>
             <h2 id="t-drag">이토 항등식 μ − g = ½σ²는 실데이터에서 성립한다</h2>
             <p className="lead">
               두 기간 6개 전략 모두에서 실측 항력과 ½σ²의 차이는 최대 {fmt(ds.maxGap, 3)}%p다 (확인 기준 {fmt(DRAG_TOLERANCE_PP, 2)}%p 이내).
@@ -140,7 +152,7 @@ export default function Home() {
         {/* 5. crisis */}
         <section id="crisis" className="slide" aria-labelledby="t-crisis">
           <div className="wrap">
-            <Eyebrow n={5}>2020 팬데믹 <Status ok={sg.first_trigger !== null && ep.proposed.mdd_pct > ep["6040"].mdd_pct} /></Eyebrow>
+            <Eyebrow id="crisis">2020 팬데믹 <Status ok={sg.first_trigger !== null && ep.proposed.mdd_pct > ep["6040"].mdd_pct} /></Eyebrow>
             <h2 id="t-crisis">세이프가드는 실제 위기에서 작동했다</h2>
             <p className="lead">
               실데이터에서 세이프가드는 {sg.first_trigger ? dateKo(sg.first_trigger) : "—"}에 처음 발동했고, 에피소드 구간({ewin.start} → {ewin.end}) 중 {sg.days_beta_positive}일 동안 켜져 평균 현금 비중이 {fmt(sg.mean_cash_weight_pct, 1)}%였다.
@@ -154,7 +166,7 @@ export default function Home() {
         {/* 6. costs */}
         <section id="costs" className="slide" aria-labelledby="t-costs">
           <div className="wrap">
-            <Eyebrow n={6}>거래비용 <Status ok={false} /></Eyebrow>
+            <Eyebrow id="costs">거래비용 <Status ok={false} /></Eyebrow>
             <h2 id="t-costs">재현 실패의 주원인은 거래비용이다</h2>
             <div className="grid-2">
               <CostCharts />
@@ -178,7 +190,7 @@ export default function Home() {
         {/* 7. significance */}
         <section id="significance" className="slide" aria-labelledby="t-sig">
           <div className="wrap">
-            <Eyebrow n={7}>통계적 유의성 <Status ok={!notSig("primary")} okText="유의함" failText="유의한 차이 없음" /></Eyebrow>
+            <Eyebrow id="significance">통계적 유의성 <Status ok={!notSig("primary")} okText="유의함" failText="유의한 차이 없음" /></Eyebrow>
             <h2 id="t-sig">제안 모델과 MVO의 샤프 차이는 0과 구별되지 않는다</h2>
             <p className="lead">
               {PERIOD_LABEL.primary}: 차이 {signed(boot.primary.sharpe_diff, 3)}, 95% 신뢰구간 [{fmt(boot.primary.ci95[0], 3)}, {fmt(boot.primary.ci95[1], 3)}], 양측 p = {fmt(boot.primary.p_value, 4)}.
@@ -192,7 +204,7 @@ export default function Home() {
         {/* 8. provenance */}
         <section id="provenance" className="slide" aria-labelledby="t-prov">
           <div className="wrap">
-            <Eyebrow n={8}>재현성 · 신뢰의 근거</Eyebrow>
+            <Eyebrow id="provenance">재현성 · 신뢰의 근거</Eyebrow>
             <h2 id="t-prov">결과를 보기 전에 규칙을 먼저 고정했다</h2>
             <ol className="timeline" aria-label="커밋 타임라인">
               {steps.map((s) => (

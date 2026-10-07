@@ -1,17 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SECTIONS } from "@/lib/sections";
 
-export const SECTIONS = [
-  { id: "cover", label: "표지" },
-  { id: "compare", label: "대시보드" },
-  { id: "curves", label: "누적자산" },
-  { id: "drag", label: "변동성 항력" },
-  { id: "crisis", label: "2020 팬데믹" },
-  { id: "costs", label: "거래비용" },
-  { id: "significance", label: "유의성" },
-  { id: "provenance", label: "재현성" },
-] as const;
 
 function currentIndex(): number {
   const navH = document.querySelector<HTMLElement>(".nav")?.offsetHeight ?? 0;
