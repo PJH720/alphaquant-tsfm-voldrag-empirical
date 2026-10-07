@@ -11,7 +11,7 @@ import threading
 import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 import numpy as np
@@ -23,7 +23,13 @@ from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field, field_validator
 
 from voldrag import config as C
-from voldrag.api.engine import BENCHMARKS, LAMBDA_GRID, PREREGISTERED, LiveEngine
+from voldrag.api.engine import (
+    BENCHMARKS,
+    LAMBDA_GRID,
+    PREREGISTERED,
+    TURNOVER_PENALTY_GRID,
+    LiveEngine,
+)
 
 COST_RANGE = (0.0, 30.0)
 K_RANGE = (0.5, 2.5)
@@ -97,7 +103,7 @@ def health() -> dict:
     idx = eng.returns.index if eng else None
     return {
         "status": "ok" if eng else "starting",
-        "server_time": datetime.now(timezone.utc).isoformat(),
+        "server_time": datetime.now(UTC).isoformat(),
         "gpu": _gpu(),
         "chronos": {"model": C.CHRONOS_MODEL, "dtype": str(DTYPE).replace("torch.", ""),
                     "loaded": bool(eng and eng._chronos is not None)},
@@ -105,7 +111,10 @@ def health() -> dict:
         "label": "EXPLORATORY: not pre-registered (PREREGISTRATION.md §8)",
         "preregistered": PREREGISTERED,
         "ranges": {"cost_bp": COST_RANGE, "k_tau": K_RANGE, "cash_floor": FLOOR_RANGE,
-                   "lambda_param": LAMBDA_GRID, "horizon": HORIZON_RANGE},
+                   "lambda_param": LAMBDA_GRID, "lambda_tc": [min(TURNOVER_PENALTY_GRID), max(TURNOVER_PENALTY_GRID)],
+                   "horizon": HORIZON_RANGE},
+        "grids": {"lambda_tc": TURNOVER_PENALTY_GRID},
+        "default_lambda_tc": PREREGISTERED["lambda_tc"],
         "defaults": {"horizon": C.HORIZON},
         "safeguard_spec": {"tau_window": C.TAU_WINDOW, "tau_q": C.TAU_Q, "kappa": C.KAPPA},
         "periods": {p: {"start": s, "end": e} for p, (s, e) in C.PERIODS.items()},
@@ -128,6 +137,8 @@ class SimRequest(BaseModel):
     k_tau: float = Field(PREREGISTERED["k_tau"], ge=K_RANGE[0], le=K_RANGE[1])
     cash_floor: float = Field(PREREGISTERED["cash_floor"], ge=FLOOR_RANGE[0], le=FLOOR_RANGE[1])
     lambda_param: float = PREREGISTERED["lambda_param"]
+    lambda_tc: float = Field(PREREGISTERED["lambda_tc"], ge=min(TURNOVER_PENALTY_GRID), le=max(TURNOVER_PENALTY_GRID),
+                             description="L1 turnover penalty parameter (EXPLORATORY); one of the precomputed grid values")
 
     @field_validator("lambda_param")
     @classmethod
@@ -135,6 +146,14 @@ class SimRequest(BaseModel):
         if v not in LAMBDA_GRID:
             raise ValueError(f"lambda_param must be one of {LAMBDA_GRID}")
         return v
+
+    @field_validator("lambda_tc")
+    @classmethod
+    def _on_tc_grid(cls, v: float) -> float:
+        match = [g for g in TURNOVER_PENALTY_GRID if np.isclose(v, g, rtol=0, atol=1e-9)]
+        if not match:
+            raise ValueError(f"lambda_tc must be one of {TURNOVER_PENALTY_GRID}")
+        return match[0]
 
 
 METRIC_KEYS = ("cagr_pct", "sharpe", "mdd_pct", "sigma_pct", "turnover_annual_pct", "emp_drag_pct",
@@ -145,6 +164,15 @@ def _summary(m: dict) -> dict:
     return {k: _r(m[k]) for k in METRIC_KEYS}
 
 
+def _rolling_annual(to: np.ndarray) -> np.ndarray:
+    """Turnover over the trailing TRADING_DAYS days in % (shorter windows at the start are scaled to a year)."""
+    c = np.cumsum(to)
+    n = np.arange(1, len(to) + 1)
+    w = C.TRADING_DAYS
+    trailing = c - np.concatenate([np.zeros(w), c[:-w]])[: len(c)]
+    return 100 * trailing * w / np.minimum(n, w)
+
+
 @app.post("/api/simulate")
 def simulate(req: SimRequest) -> dict:
     t0 = time.perf_counter()
@@ -152,14 +180,15 @@ def simulate(req: SimRequest) -> dict:
     p = req.period
     params = req.model_dump(exclude={"period"})
     is_prereg = all(np.isclose(params[k], PREREGISTERED[k]) for k in PREREGISTERED)
-    g = eng.proposed_gross(p, req.k_tau, req.cash_floor, req.lambda_param)
-    g_ref = eng.proposed_gross(p, *(PREREGISTERED[k] for k in ("k_tau", "cash_floor", "lambda_param")))
+    g = eng.proposed_gross(p, req.k_tau, req.cash_floor, req.lambda_param, req.lambda_tc)
+    g_ref = eng.proposed_gross(p, *(PREREGISTERED[k] for k in ("k_tau", "cash_floor", "lambda_param", "lambda_tc")))
     r = eng.net(g, req.cost_bp)
     r_ref = eng.net(g_ref, req.cost_bp)
     days = eng.periods[p]["days"]
     triggered = eng.beta(req.k_tau, 0.0).reindex(days).fillna(0.0)  # S > k*tau, before the floor
     bench = {b: eng.net(eng.benchmarks[p][b], req.cost_bp) for b in BENCHMARKS}
     curves = eng.weekly(p, last={"proposed": np.cumprod(1 + r), "proposed_prereg": np.cumprod(1 + r_ref),
+                                 "turnover_1y_pct": _rolling_annual(g.to), "turnover_1y_pct_prereg": _rolling_annual(g_ref.to),
                                  **{b: np.cumprod(1 + v) for b, v in bench.items()}},
                         mean={"cash_weight": g.cash, "cash_weight_prereg": g_ref.cash})
     out = {

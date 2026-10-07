@@ -1,9 +1,9 @@
 """Live what-if engine behind the demo site's interactive lab. EXPLORATORY (PREREGISTRATION.md §8).
 
 The engine reuses the pre-registered pipeline (data, Chronos cache, QP, autoencoder) and lets
-four knobs move: transaction cost, a multiplier k on the safeguard threshold tau, a floor on the
-cash overlay beta, and the risk aversion lambda of the Itô-Kelly QP (lambda = 1 is eq. 30 as
-pre-registered). With every knob at its pre-registered value the output must equal
+five knobs move: transaction cost, a multiplier k on the safeguard threshold tau, a floor on the
+cash overlay beta, the risk aversion lambda of the Itô-Kelly QP (lambda = 1 is eq. 30 as
+pre-registered) and an L1 turnover penalty lambda_tc (0 = pre-registered). With every knob at its pre-registered value the output must equal
 results/results.json; `self_check()` asserts that at startup.
 
 Simulation is float64 NumPy on the CPU: the backtest is a path of ~2,400 dependent days, which a GPU
@@ -15,7 +15,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import multiprocessing as mp
+import os
 import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -26,14 +29,29 @@ import torch
 
 from voldrag import backtest as B
 from voldrag import config as C
+from voldrag import exploratory_turnover as TO
 from voldrag import models as M
 from voldrag.data import MANIFEST, load_market_data
 from voldrag.run import RESULTS, build_targets
 
 LAMBDA_GRID = (0.5, 1.0, 2.0, 3.0, 4.0)  # QP risk aversion; 1.0 = pre-registered eq. (30)
-PREREGISTERED = {"cost_bp": float(C.BASE_COST_BP), "k_tau": 1.0, "cash_floor": 0.0, "lambda_param": 1.0}
+# L1 turnover penalty (annualized objective units); 0.0 = pre-registered. Values up to 0.005 barely move
+# turnover on this data (results/exploratory_turnover_penalty.json), so the grid extends to 0.5.
+TURNOVER_PENALTY_GRID = (0.0, 0.0005, 0.0010, 0.0020, 0.0050, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5)
+PREREGISTERED = {"cost_bp": float(C.BASE_COST_BP), "k_tau": 1.0, "cash_floor": 0.0, "lambda_param": 1.0,
+                 "lambda_tc": 0.0}
 BENCHMARKS = ("6040", "mvo", "ew")
 TARGETS_CACHE = M.CACHE_DIR / "live_lambda_targets.npz"
+_POOL: dict = {}  # inputs shared with forked worker processes while the cache is built
+
+
+def _combo_key(c: tuple[float, float]) -> str:
+    return f"w_lambda_{c[0]}_tc_{c[1]}"
+
+
+def _solve_combo(c: tuple[float, float]) -> tuple[tuple[float, float], np.ndarray]:
+    t = TO.turnover_targets(_POOL["returns"], _POOL["inputs"], lambda_tc=c[1], risk_aversion=c[0])
+    return c, np.array([t.weights[d] for d in _POOL["dates"]])
 
 
 @dataclass(frozen=True)
@@ -51,7 +69,7 @@ class LiveEngine:
         t0 = time.time()
         md = load_market_data()
         self.returns = md.returns
-        self.targets, self.lambda_targets = self._load_or_build_targets(md, log)
+        self.targets, self.qp_targets = self._load_or_build_targets(md, log)
         self.signals = M.Safeguard(md.state).signals(md.state)
         self.periods = {}
         for period, (start, end) in C.PERIODS.items():
@@ -74,51 +92,47 @@ class LiveEngine:
         log(f"  engine ready in {time.time() - t0:.1f}s; self-check ok={self.self_check_result['ok']}")
 
     # ------------------------------------------------------------------ targets
-    def _load_or_build_targets(self, md, log) -> tuple[dict[str, B.Targets], dict[float, B.Targets]]:
-        """Target weights of the pre-registered strategies plus the lambda grid, cached on disk.
+    def _load_or_build_targets(self, md, log) -> tuple[dict[str, B.Targets], dict[tuple[float, float], B.Targets]]:
+        """Pre-registered strategy targets plus every (lambda, lambda_tc) QP variant, cached on disk.
 
-        The cache is keyed on the data manifest, the Chronos cache and config.py; self_check() then
-        verifies the cached path against results.json on every start.
-        lambda != 1 re-solves eq. (30) as min lambda/2 w'Sw - mu'w on the same dates, Chronos moments
-        and CVaR bound: lambda/2 w'Sw = 1/2 w'(lambda S)w, so the pre-registered solver gets lambda * cov.
+        The cache is keyed on the data manifest, the Chronos cache, config.py and both grids;
+        self_check() verifies the pre-registered path against results.json on every start.
+        lambda != 1 scales the covariance (lambda/2 w'Sw = 1/2 w'(lambda S)w). lambda_tc > 0 adds the
+        exploratory L1 turnover penalty against the previous solution drifted to the decision date
+        (models.ito_kelly_turnover_qp). (1.0, 0.0) is the pre-registered QP itself.
         """
         chronos = M.ChronosMoments()
-        key = hashlib.sha256(MANIFEST.read_bytes() + chronos.cache_path.read_bytes()
-                             + Path(C.__file__).read_bytes() + repr(LAMBDA_GRID).encode()).hexdigest()
+        key = hashlib.sha256(MANIFEST.read_bytes() + chronos.cache_path.read_bytes() + Path(C.__file__).read_bytes()
+                             + repr((LAMBDA_GRID, TURNOVER_PENALTY_GRID)).encode()).hexdigest()
         names = ("proposed", *BENCHMARKS)
+        combos = [(lam, tc) for lam in LAMBDA_GRID for tc in TURNOVER_PENALTY_GRID if (lam, tc) != (1.0, 0.0)]
         if TARGETS_CACHE.exists():
             with np.load(TARGETS_CACHE, allow_pickle=False) as z:
                 if str(z["key"]) == key:
                     targets = {n: _targets(z[f"d_{n}"], z[f"w_{n}"]) for n in names}
-                    lam = {x: _targets(z["d_proposed"], z[f"w_lambda_{x}"]) for x in LAMBDA_GRID if x != 1.0}
+                    qp = {c: _targets(z["d_proposed"], z[_combo_key(c)]) for c in combos}
                     log(f"  targets loaded from {TARGETS_CACHE.name}")
-                    return targets, {1.0: targets["proposed"], **lam}
+                    return targets, {(1.0, 0.0): targets["proposed"], **qp}
         t0 = time.time()
         targets, _, _ = build_targets(md)
         dates = sorted(targets["proposed"].weights)
-        moments = {}
-        for d in dates:
-            win = md.returns.loc[:d].iloc[-C.W_ITO:].to_numpy()
-            _, _, corr = M.historical_moments(win)
-            mu, sigma = chronos.moments(d, win)
-            moments[d] = (mu, corr * np.outer(sigma, sigma), win)
-        lam: dict[float, B.Targets] = {}
-        for x in LAMBDA_GRID:
-            if x != 1.0:
-                t = B.Targets()
-                for d, (mu, cov, win) in moments.items():
-                    t.weights[d], t.status[d] = M.ito_kelly_qp(mu, x * cov, scenarios=win)
-                lam[x] = t
+        _POOL.update(returns=md.returns, inputs=TO.decision_inputs(md.returns, dates), dates=dates)
+        workers = max(1, min(len(combos), (os.cpu_count() or 2) - 2))
+        with ProcessPoolExecutor(workers, mp_context=mp.get_context("fork")) as pool:
+            solved = dict(pool.map(_solve_combo, combos))
+        _POOL.clear()
         arrays = {"key": np.array(key)}
         for n in names:
             ds = sorted(targets[n].weights)
             arrays[f"d_{n}"] = np.array(ds, dtype="datetime64[ns]")
             arrays[f"w_{n}"] = np.array([targets[n].weights[d] for d in ds])
-        for x, t in lam.items():
-            arrays[f"w_lambda_{x}"] = np.array([t.weights[d] for d in dates])
+        for c, w in solved.items():
+            arrays[_combo_key(c)] = w
         np.savez(TARGETS_CACHE, **arrays)
-        log(f"  targets built in {time.time() - t0:.0f}s, cached to {TARGETS_CACHE.name}")
-        return {n: targets[n] for n in names}, {1.0: targets["proposed"], **lam}
+        log(f"  targets built in {time.time() - t0:.0f}s ({len(combos)} QP variants on {workers} processes), "
+            f"cached to {TARGETS_CACHE.name}")
+        qp = {c: _targets(np.array(dates, dtype="datetime64[ns]"), w) for c, w in solved.items()}
+        return {n: targets[n] for n in names}, {(1.0, 0.0): targets["proposed"], **qp}
 
     # ------------------------------------------------------------------ simulation
     def beta(self, k_tau: float, cash_floor: float) -> pd.Series:
@@ -174,8 +188,9 @@ class LiveEngine:
         return Gross(rp=rp, to=to, w0_abs=float(np.abs(w_form).sum()), cash=w_end[:, C.CASH_IDX],
                      n_trades=len(pos))
 
-    def proposed_gross(self, period: str, k_tau: float, cash_floor: float, lambda_param: float) -> Gross:
-        return _proposed_cached(self, period, round(k_tau, 4), round(cash_floor, 4), float(lambda_param))
+    def proposed_gross(self, period: str, k_tau: float, cash_floor: float, lambda_param: float,
+                       lambda_tc: float = 0.0) -> Gross:
+        return _proposed_cached(self, period, round(k_tau, 4), round(cash_floor, 4), float(lambda_param), float(lambda_tc))
 
     def net(self, g: Gross, cost_bp: float) -> np.ndarray:
         c = cost_bp / 10_000.0
@@ -219,7 +234,7 @@ class LiveEngine:
         worst, checked = 0.0, 0
         beta = self.beta(1.0, 0.0)
         for period, (start, end) in C.PERIODS.items():
-            g_prop = self.proposed_gross(period, 1.0, 0.0, 1.0)
+            g_prop = self.proposed_gross(period, *(PREREGISTERED[k] for k in ("k_tau", "cash_floor", "lambda_param", "lambda_tc")))
             ref = B.simulate(self.returns, self.targets["proposed"], start, end, C.BASE_COST_BP, beta=beta)
             worst = max(worst, float(np.abs(self.net(g_prop, C.BASE_COST_BP) - ref.net_returns.to_numpy()).max()))
             for cost in C.COSTS_BP:
@@ -252,5 +267,5 @@ def _targets(dates: np.ndarray, weights: np.ndarray) -> B.Targets:
 
 
 @lru_cache(maxsize=256)
-def _proposed_cached(engine: LiveEngine, period: str, k_tau: float, cash_floor: float, lam: float) -> Gross:
-    return engine._gross(period, engine.lambda_targets[lam], engine.beta(k_tau, cash_floor))
+def _proposed_cached(engine: LiveEngine, period: str, k_tau: float, cash_floor: float, lam: float, tc: float) -> Gross:
+    return engine._gross(period, engine.qp_targets[(lam, tc)], engine.beta(k_tau, cash_floor))

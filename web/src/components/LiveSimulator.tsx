@@ -17,20 +17,25 @@ type Summary = {
   cagr_pct: number; sharpe: number; mdd_pct: number; sigma_pct: number; turnover_annual_pct: number;
   emp_drag_pct: number; theo_drag_pct: number;
 };
-type Params = { cost_bp: number; k_tau: number; cash_floor: number; lambda_param: number };
+type Params = { cost_bp: number; k_tau: number; cash_floor: number; lambda_param: number; lambda_tc: number };
 type Health = {
   status: "ok" | "starting";
   gpu: { available: boolean; device: string; name?: string; cuda_version?: string; vram_total_mb?: number; vram_allocated_process_mb?: number };
   chronos: { model: string; dtype: string; loaded: boolean };
   self_check: { ok: boolean; values_checked?: number; against?: string; detail?: string } | null;
   preregistered: Params;
-  ranges: { cost_bp: [number, number]; k_tau: [number, number]; cash_floor: [number, number]; lambda_param: number[]; horizon: [number, number] };
+  ranges: { cost_bp: [number, number]; k_tau: [number, number]; cash_floor: [number, number]; lambda_param: number[]; lambda_tc: [number, number]; horizon: [number, number] };
+  grids?: { lambda_tc: number[] };   // absent on servers older than the turnover knob
+  default_lambda_tc?: number;
   assets: string[];
   infer_dates: { first: string; last: string } | null;
   defaults: { horizon: number };
   safeguard_spec: { tau_window: number; tau_q: number; kappa: number };
 };
-type SimRow = { date: string; proposed: number; proposed_prereg?: number; "6040": number; mvo: number; ew: number; cash_weight?: number; cash_weight_prereg?: number };
+type SimRow = {
+  date: string; proposed: number; proposed_prereg?: number; "6040": number; mvo: number; ew: number;
+  cash_weight?: number; cash_weight_prereg?: number; turnover_1y_pct?: number; turnover_1y_pct_prereg?: number;
+};
 type Sweep = { cost_bp: number[]; cagr_pct: number[]; sharpe: number[]; mdd_pct: number[] };
 type SimResponse = {
   period: PeriodId; start: string; end: string; params: Params; is_preregistered: boolean; label: string;
@@ -281,6 +286,7 @@ export default function LiveLab() {
             <Toggle label="위험회피 λ" options={health.ranges.lambda_param.map((l) => ({ id: String(l), label: fmt(l, 1) }))}
               value={String(params.lambda_param)} onChange={(v) => set("lambda_param")(Number(v))} />
           </div>
+          {health.grids?.lambda_tc && params.lambda_tc !== undefined && <TurnoverPenalty grid={health.grids.lambda_tc} value={params.lambda_tc} onChange={set("lambda_tc")} period={period} />}
           <div className="field">
             <span>&nbsp;</span>
             <button type="button" onClick={() => setParams(health.preregistered)} disabled={sameParams(params, health.preregistered)}>사전등록 값으로</button>
@@ -311,7 +317,7 @@ function LiveResults({ res, rtt }: { res: SimResponse; rtt: number }) {
       <div className="controls" style={{ justifyContent: "space-between" }}>
         <span style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
           {chip}
-          <span className="cap" style={{ margin: 0 }}>{PERIOD_LABEL[res.period]} · {res.start} → {res.end} · 비용 {fmt(res.params.cost_bp, 0)}bp · k {fmt(res.params.k_tau, 2)} · β_min {fmt(100 * res.params.cash_floor, 0)}% · λ {fmt(res.params.lambda_param, 1)}</span>
+          <span className="cap" style={{ margin: 0 }}>{PERIOD_LABEL[res.period]} · {res.start} → {res.end} · 비용 {fmt(res.params.cost_bp, 0)}bp · k {fmt(res.params.k_tau, 2)} · β_min {fmt(100 * res.params.cash_floor, 0)}% · λ {fmt(res.params.lambda_param, 1)} {res.params.lambda_tc !== undefined && <> · λ<sub>tc</sub> {fmtTc(res.params.lambda_tc)}</>}</span>
         </span>
         <span className="compute">서버 계산 {fmt(res.compute.ms, 1)}ms · 왕복 {Math.round(rtt)}ms · {res.compute.engine}</span>
       </div>
@@ -331,6 +337,7 @@ function LiveResults({ res, rtt }: { res: SimResponse; rtt: number }) {
         <WealthChart rows={res.curves} showRef={!res.is_preregistered} live
           caption={`${res.start} → ${res.end} · 비용 ${fmt(res.params.cost_bp, 0)}bp 차감 · 주간 표본`} />
         <div className="lab-stack">
+          <TurnoverChart rows={res.curves} showRef={!res.is_preregistered} />
           <SweepChart res={res} />
           <CashChart rows={res.curves} showRef={!res.is_preregistered} />
         </div>
@@ -372,6 +379,7 @@ const LABEL: Record<string, string> = {
   proposed: "제안 모델 · 현재 설정", proposed_prereg: "제안 모델 · 사전등록 설정",
   "6040": KO["6040"], mvo: KO.mvo, ew: KO.ew,
   cash_weight: "현금 비중 · 현재 설정", cash_weight_prereg: "현금 비중 · 사전등록 설정",
+  turnover_1y_pct: "회전율 · 현재 설정", turnover_1y_pct_prereg: "회전율 · 사전등록 설정",
 };
 
 function Tip({ active, payload, label, unit, digits = 3 }: { active?: boolean; payload?: TipItem[]; label?: unknown; unit: string; digits?: number }) {
@@ -522,6 +530,56 @@ function CashChart({ rows, showRef }: { rows: SimRow[]; showRef: boolean }) {
             <Area dataKey="cash_weight" stroke="var(--s-proposed)" strokeWidth={1.5} fill="var(--s-proposed)" fillOpacity={0.18} isAnimationActive={false} />
             {showRef && <Line dataKey="cash_weight_prereg" stroke="var(--s-proposed)" strokeWidth={1.5} strokeDasharray="6 4" dot={false} isAnimationActive={false} />}
           </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </Figure>
+  );
+}
+
+// ------------------------------------------------------------------ turnover penalty (5th knob)
+const fmtTc = (v: number) => (v === 0 ? "0" : v.toLocaleString("ko-KR", { maximumSignificantDigits: 2 }));
+
+/** Discrete slider over the server's precomputed lambda_tc grid (the grid is not evenly spaced). */
+function TurnoverPenalty({ grid, value, onChange, period }: { grid: number[]; value: number; onChange: (v: number) => void; period: PeriodId }) {
+  const idx = Math.max(0, grid.findIndex((g) => Math.abs(g - value) < 1e-12));
+  const prereg = performance.performance[period][String(performance.base_cost_bp)].proposed.turnover_annual_pct;
+  return (
+    <label className="slider" style={{ gridColumn: "span 2" }}>
+      <span className="lbl">
+        <span>회전율 페널티 (L1 Regularization, λ<sub>tc</sub>) <span className="chip chip-explore">탐색적 분석 (EXPLORATORY)</span></span>
+        <output>{fmtTc(value)}</output>
+      </span>
+      <input type="range" min={0} max={grid.length - 1} step={1} value={idx} onChange={(e) => onChange(grid[Number(e.target.value)])}
+        aria-valuetext={`λ_tc ${fmtTc(value)}`} />
+      <span className="hint" style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+        {value === 0
+          ? <span className="chip chip-real">미적용 (사전등록: {fmt(prereg, 0)}% 회전율)</span>
+          : <span className="chip chip-explore">마찰 통제 (회전율 감쇠)</span>}
+        <span>min ½w′Σw − μ′w + λ<sub>tc</sub>‖w − w<sub>t−1</sub>‖₁ · 격자 {grid.map(fmtTc).join(" / ")}</span>
+      </span>
+    </label>
+  );
+}
+
+function TurnoverChart({ rows, showRef }: { rows: SimRow[]; showRef: boolean }) {
+  const data = rows.filter((r) => r.turnover_1y_pct !== undefined).map((r) => ({
+    date: r.date, turnover_1y_pct: r.turnover_1y_pct, turnover_1y_pct_prereg: showRef ? r.turnover_1y_pct_prereg : undefined,
+  }));
+  const ticks = useMemo(() => yearTicks(data.map((r) => r.date)), [data]);
+  const last = data[data.length - 1];
+  return (
+    <Figure title="연환산 회전율 · 직전 1년 이동" summary={`제안 모델의 직전 1년 회전율, 마지막 값 ${fmt(last?.turnover_1y_pct ?? 0, 0)}%${showRef ? `, 사전등록 설정 ${fmt(last?.turnover_1y_pct_prereg ?? 0, 0)}%` : ""}.`}
+      footnote={<p className="footnote">회전율 = Σ|w − w<sub>−</sub>| (세이프가드 오버레이 거래 포함). 점선은 사전등록 설정.</p>}>
+      <div style={{ height: 170 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
+            <CartesianGrid {...gridProps} vertical={false} />
+            <XAxis dataKey="date" ticks={ticks} tickFormatter={(d: string) => d.slice(0, 4)} tick={axisTick} stroke="var(--rule)" />
+            <YAxis domain={[0, "auto"]} tick={axisTick} stroke="var(--rule)" width={64} tickFormatter={(v: number) => `${fmt(v, 0)}%`} />
+            <Tooltip content={<Tip unit="%" digits={0} />} />
+            {showRef && <Line dataKey="turnover_1y_pct_prereg" stroke="var(--s-proposed)" strokeWidth={1.5} strokeDasharray="6 4" dot={false} isAnimationActive={false} />}
+            <Line dataKey="turnover_1y_pct" stroke="var(--s-proposed)" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </Figure>

@@ -77,13 +77,13 @@ Alternatively, import the GitHub repo in the Vercel dashboard and set Root Direc
 
 ### Live lab (section 3): real-time backend on the lab workstation
 
-Section 3 of the site talks to a FastAPI server (`src/voldrag/api/`) running on the GPU workstation, exposed through a Cloudflare Quick Tunnel. It is **exploratory** (PREREGISTRATION.md §8): sliders move the transaction cost (0–30bp), a multiplier k on the safeguard threshold τ, a floor on the cash overlay β and the QP risk aversion λ (grid 0.5–4; λ = 1 is eq. 30). At the pre-registered settings the server reproduces `results/results.json`; it checks 120 values against that file on every start and the site shows the result. The backtest is path-dependent and runs in float64 NumPy on the CPU (~10–40 ms). Chronos-Bolt runs on CUDA (~35–70 ms per call); in fp32 it matches the pre-registered forecast cache exactly. Only strategy-level results and model outputs leave the server.
+Section 3 of the site talks to a FastAPI server (`src/voldrag/api/`) running on the GPU workstation, exposed through a Cloudflare Quick Tunnel. It is **exploratory** (PREREGISTRATION.md §8): sliders move the transaction cost (0–30bp), a multiplier k on the safeguard threshold τ, a floor on the cash overlay β, the QP risk aversion λ (grid 0.5–4; λ = 1 is eq. 30) and an L1 turnover penalty λ_tc (grid 0–0.5; 0 = pre-registered; see `voldrag.exploratory_turnover`). At the pre-registered settings the server reproduces `results/results.json`; it checks 120 values against that file on every start and the site shows the result. The backtest is path-dependent and runs in float64 NumPy on the CPU (~10–40 ms). Chronos-Bolt runs on CUDA (~35–70 ms per call); in fp32 it matches the pre-registered forecast cache exactly. Only strategy-level results and model outputs leave the server.
 
 ```bash
 scripts/start_live_backend.sh   # API on 127.0.0.1:8000 + tunnel; prints  <site>/?api=https://<random>.trycloudflare.com#live
 ```
 
-Open the printed link, or paste the tunnel URL into "백엔드 주소 설정" on the site (remembered per browser). `NEXT_PUBLIC_GPU_API_URL` sets a build-time default. Without a reachable backend, the section shows the pre-computed results and a yellow "정적 모드" badge. The first start takes ~2 min to build and cache the λ-grid targets in `data/cache/`; later starts take a few seconds. Needs `cloudflared` on PATH and `uv sync --group live`.
+Open the printed link, or paste the tunnel URL into "백엔드 주소 설정" on the site (remembered per browser). `NEXT_PUBLIC_GPU_API_URL` sets a build-time default. Without a reachable backend, the section shows the pre-computed results and a yellow "정적 모드" badge. The first start takes ~2.5 min to build and cache the 54 (λ, λ_tc) target sets in `data/cache/` (in parallel); later starts take a few seconds. Needs `cloudflared` on PATH and `uv sync --group live`.
 
 ## Key findings (first pre-registered run, 2026-10-07)
 

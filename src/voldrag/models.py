@@ -138,6 +138,36 @@ def ito_kelly_qp(mu: np.ndarray, cov: np.ndarray, scenarios: np.ndarray,
     return _clean(w.value), problem.status
 
 
+def ito_kelly_turnover_qp(mu: np.ndarray, cov: np.ndarray, scenarios: np.ndarray, prev_w: np.ndarray | None,
+                          lambda_tc: float, cap: float = C.W_CAP, alpha: float = C.ALPHA) -> tuple[np.ndarray, str]:
+    """EXPLORATORY, post-results (CHANGELOG.md): eqs. (30)-(31) plus lambda_tc * ||w - prev_w||_1.
+
+    Same constraints, solver and fallback as ito_kelly_qp, and the same problem when lambda_tc == 0
+    or prev_w is None. Not used by the pre-registered pipeline.
+    """
+    if lambda_tc == 0 or prev_w is None:
+        return ito_kelly_qp(mu, cov, scenarios, cap, alpha)
+    n, k = len(mu), len(scenarios)
+    ew = np.full(n, 1.0 / n)
+    gamma = cvar(-scenarios @ ew, alpha)
+    w, z, u = cp.Variable(n), cp.Variable(), cp.Variable(k, nonneg=True)
+    constraints = [
+        cp.sum(w) == 1, w >= 0, w <= cap,
+        u >= -scenarios @ w - z,
+        z + cp.sum(u) / ((1.0 - alpha) * k) <= gamma,
+    ]
+    psd = cp.psd_wrap((cov + cov.T) / 2)
+    objective = cp.Minimize(0.5 * cp.quad_form(w, psd) - mu @ w + lambda_tc * cp.norm1(w - prev_w))
+    problem = cp.Problem(objective, constraints)
+    try:
+        problem.solve(solver=cp.CLARABEL)
+    except cp.SolverError:
+        return ew, "solver_error->ew"
+    if problem.status not in SOLVER_OK or w.value is None:
+        return ew, f"{problem.status}->ew"
+    return _clean(w.value), problem.status
+
+
 def mvo_max_sharpe(mu: np.ndarray, cov: np.ndarray, cap: float = C.W_CAP,
                    rf: float = C.RF) -> tuple[np.ndarray, str]:
     """Long-only max-Sharpe with cap; minimum variance if no asset has positive excess mean."""

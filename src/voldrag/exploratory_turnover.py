@@ -20,7 +20,6 @@ from __future__ import annotations
 import argparse
 import json
 
-import cvxpy as cp
 import numpy as np
 import pandas as pd
 
@@ -28,39 +27,13 @@ from voldrag import backtest as B
 from voldrag import config as C
 from voldrag import models as M
 from voldrag.data import load_market_data
+from voldrag.models import ito_kelly_turnover_qp
 from voldrag.run import RESULTS, _round, build_targets
 
 LAMBDAS_TC = (0.0, 0.0005, 0.0010, 0.0020, 0.0050)
 STRATEGIES = {"proposed": True, "ito_tsfm": False}  # name -> safeguard overlay applied
 LABEL = "EXPLORATORY: L1 Turnover Penalty Regularization"
 OUTPUT = RESULTS / "exploratory_turnover_penalty.json"
-
-
-def ito_kelly_turnover_qp(mu: np.ndarray, cov: np.ndarray, scenarios: np.ndarray, prev_w: np.ndarray | None,
-                          lambda_tc: float, cap: float = C.W_CAP, alpha: float = C.ALPHA) -> tuple[np.ndarray, str]:
-    """models.ito_kelly_qp plus lambda_tc * ||w - prev_w||_1; the same problem when lambda_tc == 0 or prev_w is None."""
-    n, k = len(mu), len(scenarios)
-    ew = np.full(n, 1.0 / n)
-    gamma = M.cvar(-scenarios @ ew, alpha)
-    w, z, u = cp.Variable(n), cp.Variable(), cp.Variable(k, nonneg=True)
-    constraints = [
-        cp.sum(w) == 1, w >= 0, w <= cap,
-        u >= -scenarios @ w - z,
-        z + cp.sum(u) / ((1.0 - alpha) * k) <= gamma,
-    ]
-    psd = cp.psd_wrap((cov + cov.T) / 2)
-    objective = 0.5 * cp.quad_form(w, psd) - mu @ w
-    if lambda_tc > 0 and prev_w is not None:
-        objective = objective + lambda_tc * cp.norm1(w - prev_w)
-    problem = cp.Problem(cp.Minimize(objective), constraints)
-    try:
-        problem.solve(solver=cp.CLARABEL)
-    except cp.SolverError:
-        return ew, "solver_error->ew"
-    if problem.status not in M.SOLVER_OK or w.value is None:
-        return ew, f"{problem.status}->ew"
-    w_clean = np.clip(w.value, 0.0, None)
-    return w_clean / w_clean.sum(), problem.status
 
 
 def decision_inputs(returns: pd.DataFrame, dates: list[pd.Timestamp]) -> dict:
@@ -75,8 +48,11 @@ def decision_inputs(returns: pd.DataFrame, dates: list[pd.Timestamp]) -> dict:
     return out
 
 
-def turnover_targets(returns: pd.DataFrame, inputs: dict, lambda_tc: float) -> B.Targets:
-    """Sequential weekly decisions, each penalized against the previous solution drifted to the decision date."""
+def turnover_targets(returns: pd.DataFrame, inputs: dict, lambda_tc: float, risk_aversion: float = 1.0) -> B.Targets:
+    """Sequential weekly decisions, each penalized against the previous solution drifted to the decision date.
+
+    risk_aversion scales the covariance (lambda/2 w'Sw = 1/2 w'(lambda S)w); 1.0 is eq. (30).
+    """
     t = B.Targets()
     w_prev, d_prev = None, None
     for d, (mu, cov, win) in inputs.items():
@@ -84,7 +60,7 @@ def turnover_targets(returns: pd.DataFrame, inputs: dict, lambda_tc: float) -> B
         if w_prev is not None:
             growth = (1.0 + returns.loc[d_prev:d].iloc[1:]).prod().to_numpy()
             drifted = w_prev * growth / float(w_prev @ growth)
-        t.weights[d], t.status[d] = ito_kelly_turnover_qp(mu, cov, win, drifted, lambda_tc)
+        t.weights[d], t.status[d] = ito_kelly_turnover_qp(mu, risk_aversion * cov, win, drifted, lambda_tc)
         w_prev, d_prev = t.weights[d], d
     return t
 
