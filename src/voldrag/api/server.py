@@ -6,10 +6,11 @@ only: no prices, no per-asset realized returns (Yahoo redistribution terms).
 
 from __future__ import annotations
 
+import json
 import os
 import threading
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Literal
@@ -40,12 +41,52 @@ DTYPE = {"float32": torch.float32, "float16": torch.float16}[os.environ.get("VOL
 ASSET_ALIASES = {"069500.KS": "KOSPI200", "229200.KS": "KOSDAQ150", "148070.KS": "KTB10Y",
                  "SPY": "SP500", "QQQ": "NASDAQ100", "GLD": "GOLD", "SHV": "CASH"}
 RATE_LIMIT = {"/api/simulate": (40, 10.0), "/api/infer_tsfm": (12, 10.0)}  # requests per seconds, per client
+GLOBAL_LIMIT = {"/api/simulate": (200, 10.0), "/api/infer_tsfm": (30, 10.0)}  # all clients together
+GPU_WAIT_S = 2.0
+# Rule-5 labels of the site brief: a live result is exploratory unless every knob is pre-registered,
+# the cost is on the pre-registered grid and the start-up self-check against results.json passed.
+LABEL_LIVE = "실시간 · 탐색적 — 사전등록 결과 아님"
+LABEL_LIVE_EN = "live / exploratory, not the pre-registered result"
+LABEL_PREREG = "사전등록 설정 · results.json과 일치 (self-check ok)"
+ALLOWED_ORIGINS = r"https://alphaquant-voldrag-demo[-a-z0-9]*\.vercel\.app|http://(localhost|127\.0\.0\.1)(:\d+)?"
 
 state: dict = {}
 gpu_lock = threading.Lock()
 latency: dict[str, deque] = defaultdict(lambda: deque(maxlen=200))
+gpu_wait: deque = deque(maxlen=500)
 hits: dict[tuple[str, str], deque] = defaultdict(deque)
 STARTED = time.time()
+
+
+class LRU:
+    """Small thread-safe LRU of response dicts, with hit/miss counts for /api/telemetry."""
+
+    def __init__(self, maxsize: int):
+        self.maxsize, self.data, self.lock = maxsize, OrderedDict(), threading.Lock()
+        self.hits = self.misses = 0
+
+    def get(self, key):
+        with self.lock:
+            if key in self.data:
+                self.data.move_to_end(key)
+                self.hits += 1
+                return self.data[key]
+            self.misses += 1
+            return None
+
+    def put(self, key, value) -> None:
+        with self.lock:
+            self.data[key] = value
+            self.data.move_to_end(key)
+            while len(self.data) > self.maxsize:
+                self.data.popitem(last=False)
+
+    def stats(self) -> dict:
+        return {"size": len(self.data), "max": self.maxsize, "hits": self.hits, "misses": self.misses}
+
+
+sim_cache = LRU(512)
+infer_cache = LRU(1024)
 
 
 @asynccontextmanager
@@ -53,27 +94,32 @@ async def lifespan(_: FastAPI):
     state["engine"] = LiveEngine()
     if torch.cuda.is_available():  # load Chronos and warm up CUDA kernels before the first request
         _forecast("SP500", state["engine"].returns.index[-1], C.HORIZON)
+        infer_cache.data.clear()
+        infer_cache.hits = infer_cache.misses = 0
     yield
 
 
 app = FastAPI(title="voldrag live lab", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(GZipMiddleware, minimum_size=2000)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"],
+app.add_middleware(CORSMiddleware, allow_origin_regex=ALLOWED_ORIGINS, allow_methods=["GET", "POST"],
                    allow_headers=["Content-Type"], max_age=600)
 
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
-    rule = RATE_LIMIT.get(request.url.path)
-    if rule and request.method == "POST":
+    path = request.url.path
+    if path in RATE_LIMIT and request.method == "POST":
         client = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "?")
-        q, now = hits[(client, request.url.path)], time.monotonic()
-        while q and now - q[0] > rule[1]:
-            q.popleft()
-        if len(q) >= rule[0]:
-            from fastapi.responses import JSONResponse
-            return JSONResponse({"detail": "rate limited"}, status_code=429)
-        q.append(now)
+        now = time.monotonic()
+        for key, (limit, window) in (((client, path), RATE_LIMIT[path]), (("*", path), GLOBAL_LIMIT[path])):
+            q = hits[key]
+            while q and now - q[0] > window:
+                q.popleft()
+            if len(q) >= limit:
+                from fastapi.responses import JSONResponse
+                return JSONResponse({"detail": "rate limited" if key[0] != "*" else "server busy"}, status_code=429)
+        hits[(client, path)].append(now)
+        hits[("*", path)].append(now)
     return await call_next(request)
 
 
@@ -108,7 +154,7 @@ def health() -> dict:
         "chronos": {"model": C.CHRONOS_MODEL, "dtype": str(DTYPE).replace("torch.", ""),
                     "loaded": bool(eng and eng._chronos is not None)},
         "self_check": eng.self_check_result if eng else None,
-        "label": "EXPLORATORY: not pre-registered (PREREGISTRATION.md §8)",
+        "label": LABEL_LIVE, "label_en": LABEL_LIVE_EN,
         "preregistered": PREREGISTERED,
         "ranges": {"cost_bp": COST_RANGE, "k_tau": K_RANGE, "cash_floor": FLOOR_RANGE,
                    "lambda_param": LAMBDA_GRID, "lambda_tc": [min(TURNOVER_PENALTY_GRID), max(TURNOVER_PENALTY_GRID)],
@@ -127,7 +173,10 @@ def health() -> dict:
 def telemetry() -> dict:
     lat = {k: {"n": len(v), "last_ms": _r(v[-1], 2), "median_ms": _r(float(np.median(v)), 2),
                "p95_ms": _r(float(np.percentile(v, 95)), 2)} for k, v in latency.items() if v}
-    return {**health(), "uptime_s": round(time.time() - STARTED), "compute_latency": lat}
+    wait = {"n": len(gpu_wait), "p95_ms": _r(float(np.percentile(gpu_wait, 95)), 2) if gpu_wait else None,
+            "max_ms": _r(max(gpu_wait), 2) if gpu_wait else None, "timeout_s": GPU_WAIT_S}
+    return {**health(), "uptime_s": round(time.time() - STARTED), "compute_latency": lat,
+            "cache": {"simulate": sim_cache.stats(), "infer_tsfm": infer_cache.stats()}, "gpu_lock_wait": wait}
 
 
 # --------------------------------------------------------------------------- simulate
@@ -173,9 +222,31 @@ def _rolling_annual(to: np.ndarray) -> np.ndarray:
     return 100 * trailing * w / np.minimum(n, w)
 
 
+def _sim_key(req: SimRequest) -> str:
+    """Canonical cache key; the request is snapped to the same precision before computing."""
+    return json.dumps([req.period, round(req.cost_bp, 1), round(req.k_tau, 2), round(req.cash_floor, 2),
+                       req.lambda_param, req.lambda_tc])
+
+
 @app.post("/api/simulate")
 def simulate(req: SimRequest) -> dict:
     t0 = time.perf_counter()
+    req = req.model_copy(update={"cost_bp": round(req.cost_bp, 1), "k_tau": round(req.k_tau, 2),
+                                 "cash_floor": round(req.cash_floor, 2)})
+    key = _sim_key(req)
+    cached = sim_cache.get(key)
+    if cached is None:
+        cached = _simulate(req)
+        sim_cache.put(key, cached)
+        hit = False
+    else:
+        hit = True
+    ms = (time.perf_counter() - t0) * 1000
+    latency["simulate"].append(ms)
+    return {**cached, "compute": {**cached["compute"], "cached": hit, "ms": round(ms, 2)}}
+
+
+def _simulate(req: SimRequest) -> dict:
     eng: LiveEngine = state["engine"]
     p = req.period
     params = req.model_dump(exclude={"period"})
@@ -194,8 +265,8 @@ def simulate(req: SimRequest) -> dict:
     out = {
         "period": p, "start": str(days[0].date()), "end": str(days[-1].date()),
         "params": params, "is_preregistered": bool(is_prereg),
-        "label": "PRE-REGISTERED settings" if is_prereg and req.cost_bp in C.COSTS_BP else
-                 "EXPLORATORY: not pre-registered (PREREGISTRATION.md §8)",
+        "label": LABEL_PREREG if is_prereg and req.cost_bp in C.COSTS_BP and _self_check_ok() else LABEL_LIVE,
+        "label_en": LABEL_LIVE_EN,
         "proposed": _summary(eng.metrics(p, r, g)),
         "proposed_prereg_same_cost": _summary(eng.metrics(p, r_ref, g_ref)),
         "benchmarks": {b: _summary(eng.metrics(p, bench[b], eng.benchmarks[p][b])) for b in BENCHMARKS},
@@ -207,10 +278,13 @@ def simulate(req: SimRequest) -> dict:
         "curves": curves,
         "compute": {"device": "cpu", "engine": "numpy float64 (path-dependent backtest)"},
     }
-    ms = (time.perf_counter() - t0) * 1000
-    latency["simulate"].append(ms)
-    out["compute"]["ms"] = round(ms, 2)
     return out
+
+
+def _self_check_ok() -> bool:
+    eng = state.get("engine")
+    sc = getattr(eng, "self_check_result", None) if eng is not None else None
+    return bool(sc and sc.get("ok"))
 
 
 # --------------------------------------------------------------------------- Chronos inference
@@ -221,11 +295,21 @@ class InferRequest(BaseModel):
     k_tau: float = Field(1.0, ge=K_RANGE[0], le=K_RANGE[1])
 
 
-def _forecast(asset: str, date: pd.Timestamp, horizon: int) -> tuple[np.ndarray, float]:
+def _forecast(asset: str, date: pd.Timestamp, horizon: int) -> tuple[np.ndarray, float, bool]:
+    """Chronos quantiles for all assets at `date`. Cached: CUDA fp32 inference is bit-for-bit
+    deterministic (results/cross_platform_ubuntu_cuda.md §3), so a repeat needs no GPU."""
+    key = (str(date.date()), asset, horizon, str(DTYPE))
+    cached = infer_cache.get(key)
+    if cached is not None:
+        return cached[0], cached[1], True
     eng: LiveEngine = state["engine"]
     win = eng.returns.loc[:date].iloc[-C.W_ITO:].to_numpy()  # data dated at or before `date` only
     context = torch.tensor(np.log1p(win).T, dtype=torch.float32)
-    with gpu_lock:
+    w0 = time.perf_counter()
+    if not gpu_lock.acquire(timeout=GPU_WAIT_S):
+        raise HTTPException(503, "GPU busy")
+    try:
+        gpu_wait.append((time.perf_counter() - w0) * 1000)
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         t0 = time.perf_counter()
@@ -234,7 +318,11 @@ def _forecast(asset: str, date: pd.Timestamp, horizon: int) -> tuple[np.ndarray,
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         ms = (time.perf_counter() - t0) * 1000
-    return q.float().cpu().numpy(), ms
+    finally:
+        gpu_lock.release()
+    out = q.float().cpu().numpy()
+    infer_cache.put(key, (out, ms))
+    return out, ms, False
 
 
 @app.post("/api/infer_tsfm")
@@ -253,7 +341,7 @@ def infer_tsfm(req: InferRequest) -> dict:
     if len(hist) < C.W_ITO:
         raise HTTPException(422, f"date must be on or after {idx[C.W_ITO - 1].date()} (504-day context)")
     d = hist[-1]
-    q, gpu_ms = _forecast(asset, d, req.horizon)
+    q, gpu_ms, hit = _forecast(asset, d, req.horizon)
     q_pct = 100 * np.expm1(q)  # daily log-return quantiles -> simple %, per step, all assets
     sigma_d = (q[:, :, 2] - q[:, :, 0]) / C.Q_SPREAD_TO_SIGMA
     sigma = sigma_d.mean(axis=1) * np.sqrt(C.TRADING_DAYS)
@@ -288,9 +376,10 @@ def infer_tsfm(req: InferRequest) -> dict:
                       "threshold": _r(req.k_tau * tau, 6) if np.isfinite(tau) else None,
                       "beta_preregistered": _r(beta_prereg), "beta_at_k": _r(beta_k), "recommendation": rec,
                       "source": "autoencoder S_t, tau_t (pre-registered, data up to date)"},
+        "label": LABEL_LIVE, "label_en": LABEL_LIVE_EN,
         "compute": {"device": "cuda" if torch.cuda.is_available() else "cpu",
                     "dtype": str(DTYPE).replace("torch.", ""), "model": C.CHRONOS_MODEL,
-                    "gpu_ms": round(gpu_ms, 2)},
+                    "gpu_ms": round(gpu_ms, 2), "cached": hit},
     }
     ms = (time.perf_counter() - t0) * 1000
     latency["infer_tsfm"].append(ms)

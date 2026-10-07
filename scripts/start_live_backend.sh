@@ -23,7 +23,7 @@ cleanup() { kill "${TUNNEL_PID:-}" "${SERVER_PID:-}" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 
 echo "Starting API server (log: $SERVER_LOG) ..."
-(cd "$ROOT" && exec uv run --group live uvicorn voldrag.api.server:app --host 127.0.0.1 --port "$PORT") >"$SERVER_LOG" 2>&1 &
+(cd "$ROOT" && exec uv run --group live uvicorn voldrag.api.server:app --host 127.0.0.1 --port "$PORT" --limit-concurrency 16 --timeout-keep-alive 5) >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 # First start builds and caches the lambda-grid targets (~2 min); later starts take seconds.
 for _ in $(seq 1 300); do
