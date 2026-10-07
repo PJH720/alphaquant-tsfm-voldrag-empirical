@@ -123,6 +123,7 @@ function useBackend() {
     if (!url) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
+    let first = true; // the first call pays DNS + TLS setup; re-poll soon so the badge shows a steady round trip
     const tick = async () => {
       let next = POLL_OFFLINE_MS;
       try {
@@ -130,7 +131,8 @@ function useBackend() {
         if (!alive) return;
         const ok = data.status === "ok";
         setPoll({ url, ok, health: ok ? data : null, ping: ms });
-        if (ok) next = POLL_MS;
+        if (ok) next = first ? 1000 : POLL_MS;
+        first = false;
       } catch {
         if (!alive) return;
         setPoll({ url, ok: false, health: null, ping: null });
