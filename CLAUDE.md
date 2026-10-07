@@ -24,13 +24,17 @@ This repo reproduces, on real market data, a paper's framework: Itô-lemma volat
 
 ## Commands
 
-The project uses uv, with Python 3.12 and the `uv_build` backend. The package is `voldrag`, under `src/`.
+The project uses uv, with Python 3.12 and the `uv_build` backend. The package is `voldrag`, under `src/`. The default branch is `main`.
 
 ```bash
 uv sync                                    # install deps (incl. dev group: pytest)
-uv run python -c "from voldrag.data import load_market_data; d = load_market_data()"   # fetch/align data
-uv run pytest                              # tests (none exist yet)
-uv run pytest tests/test_x.py::test_name   # single test
+uv run python -m voldrag.run               # full pipeline -> results/ (Chronos on CUDA if available, else CPU)
+uv run python -m voldrag.exploratory       # EXPLORATORY 5bp cost row -> results/exploratory_cost_sensitivity.json
+uv run python -m voldrag.export_web        # results/ -> web/public/data/*.json (needs gh; refuses dirty results/)
+uv run pytest                              # tests
+uv run pytest tests/test_pipeline.py::test_name   # single test
+scripts/start_live_backend.sh              # live lab: FastAPI (uv sync --group live) + Cloudflare Quick Tunnel
+cd web && pnpm i && pnpm build             # demo site (Next.js static export -> web/out); see web/AGENTS.md
 ```
 
 `load_market_data()` downloads from Yahoo (yfinance) and the FRED public CSV endpoint on the first call. It caches each source as parquet in `data/raw/`, which is gitignored because vendor data is not redistributed. It then rewrites `data/manifest.json` with the sha256, row count and date range of each cached file. The manifest is committed, so a diff in it means the upstream data changed.
@@ -53,13 +57,13 @@ uv run pytest tests/test_x.py::test_name   # single test
   - **KOSDAQ150 is chain-linked on returns:** `^KQ11` up to 2015-10-01, then `229200.KS`.
   - **Gaps:** forward-fill is capped at `FFILL_LIMIT=5`. Only the leading rows without a prior US/FX observation are trimmed. Any other NaN raises an error and must not be silently filled.
 
-**Not yet implemented** (spec in `PREREGISTRATION.md` §4–§7):
-- Strategies: `6040`, `ew`, `mvo`, `ito_hist`, `ito_tsfm`, `proposed`.
-- The Itô-Kelly QP: cvxpy + CLARABEL, a Rockafellar–Uryasev CVaR constraint, and γ_target set to the equal-weight CVaR.
-- The Ledoit-Wolf + Higham covariance estimate.
-- Chronos-Bolt moment extraction.
-- The autoencoder safeguard: trained on the warm-up period only, then frozen. Its standardization stats come from the warm-up only.
-- The backtester:
-  - Weights are decided at the close of *t* and earn returns from *t+1*, drifting between rebalances.
-  - Costs are charged on every trade.
-- Metrics and the block-bootstrap significance test.
+**`models.py`**: Ledoit-Wolf + Higham moments, `ChronosMoments` (forecasts cached by decision date in `data/cache/`), the Itô-Kelly QP with a Rockafellar–Uryasev CVaR bound at the equal-weight CVaR (cvxpy + CLARABEL), max-Sharpe MVO, and the autoencoder `Safeguard` (trained on the warm-up only, then frozen) with `beta_from_score`.
+
+**`backtest.py`**: rebalancing schedules, strategy targets, `simulate()` and metrics. Weights are decided at the close of *t*, earn returns from *t+1* and drift between trades. Costs are charged on every trade. Also holds the block-bootstrap Sharpe test.
+
+**`run.py`**: the orchestrator. `build_targets()` → backtests over both periods and all pre-registered costs → `results/` (results.json, REPORT.md, daily returns, weights, safeguard signals) and `DATA.md`.
+
+**Post-results, outside the pre-registered pipeline** (each must stay labelled as such):
+- `exploratory.py`: non-pre-registered cost levels. It checks its pre-registered rows against `results.json`.
+- `export_web.py`: strategy-level JSON for `web/`. Never export raw prices or per-asset returns.
+- `api/` (`engine.py`, `server.py`): the live what-if lab, which is exploratory. `LiveEngine.self_check()` must reproduce `results.json` at pre-registered settings. Backtests run in float64 on the CPU; only Chronos runs on the GPU.
