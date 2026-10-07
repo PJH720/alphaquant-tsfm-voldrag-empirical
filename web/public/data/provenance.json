@@ -8,6 +8,12 @@
    "date": "2026-10-07T01:52:14+09:00",
    "subject": "docs: pre-register hyperparameters before any data download or backtest"
   },
+  "data": {
+   "sha": "6f396c5bb6825157198066e595113cad0c6a03cd",
+   "short": "6f396c5",
+   "date": "2026-10-07T01:58:54+09:00",
+   "subject": "feat: data layer with KRX calendar alignment and pre-results amendments"
+  },
   "code": {
    "sha": "930abbd119b87c86f6c2f6722853bd7545a548b9",
    "short": "930abbd",
@@ -28,10 +34,10 @@
   }
  },
  "head": {
-  "sha": "6f35808c15973b0a3cceb03a27bc41a7aedd2364",
-  "short": "6f35808",
-  "date": "2026-10-07T17:46:36+09:00",
-  "subject": "exploratory: full lambda_tc grid frontier (0-0.5) in one results file; export it for the site"
+  "sha": "44d2827b0c949a33568364afdf4a9549787bf8c1",
+  "short": "44d2827",
+  "date": "2026-10-07T22:45:58+09:00",
+  "subject": "fix: align slide 27 chart and judges briefing with REPORT.md (primary period)"
  },
  "amendments": [
   {
@@ -69,8 +75,8 @@
   "passed": 34,
   "failed": 0,
   "total": 34,
-  "summary": "34 passed in 0.58s",
-  "ran_at": "2026-10-07T17:46:41+09:00"
+  "summary": "34 passed in 0.56s",
+  "ran_at": "2026-10-08T00:21:20+09:00"
  },
  "submission": {
   "repo": "PJH720/alphaquant-tsfm-voldrag",

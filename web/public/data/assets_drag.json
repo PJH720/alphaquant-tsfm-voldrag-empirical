@@ -1,0 +1,64 @@
+{
+ "period": "secondary",
+ "window": {
+  "start": "2015-01-02",
+  "end": "2026-08-31"
+ },
+ "definition": "emp_drag = mu_arith − mu_geom_log; theo = ½σ²",
+ "assets": {
+  "KOSPI200": {
+   "n_obs": 2830.0,
+   "mu_arith_pct": 18.1042,
+   "mu_geom_log_pct": 15.1404,
+   "sigma_pct": 24.405,
+   "theo_drag_pct": 2.978
+  },
+  "KOSDAQ150": {
+   "n_obs": 2830.0,
+   "mu_arith_pct": 9.8845,
+   "mu_geom_log_pct": 5.2519,
+   "sigma_pct": 30.4678,
+   "theo_drag_pct": 4.6414
+  },
+  "KTB10Y": {
+   "n_obs": 2830.0,
+   "mu_arith_pct": 1.3637,
+   "mu_geom_log_pct": 1.215,
+   "sigma_pct": 5.4528,
+   "theo_drag_pct": 0.1487
+  },
+  "SP500": {
+   "n_obs": 2830.0,
+   "mu_arith_pct": 17.0569,
+   "mu_geom_log_pct": 15.3557,
+   "sigma_pct": 18.4132,
+   "theo_drag_pct": 1.6952
+  },
+  "NASDAQ100": {
+   "n_obs": 2830.0,
+   "mu_arith_pct": 22.4658,
+   "mu_geom_log_pct": 19.891,
+   "sigma_pct": 22.6612,
+   "theo_drag_pct": 2.5676
+  },
+  "GOLD": {
+   "n_obs": 2830.0,
+   "mu_arith_pct": 14.9211,
+   "mu_geom_log_pct": 13.4363,
+   "sigma_pct": 17.2016,
+   "theo_drag_pct": 1.4795
+  },
+  "CASH": {
+   "n_obs": 2830.0,
+   "mu_arith_pct": 4.5126,
+   "mu_geom_log_pct": 4.0934,
+   "sigma_pct": 9.1461,
+   "theo_drag_pct": 0.4183
+  }
+ },
+ "source": {
+  "file": "results/results.json",
+  "commit": "0c15bd9",
+  "sha256": "6a35e3ab69b03da917b70d48d844bdc903c9eb1027797d030cd5e5a876bc68c7"
+ }
+}

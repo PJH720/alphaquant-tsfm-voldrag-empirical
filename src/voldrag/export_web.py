@@ -31,6 +31,7 @@ SUBMISSION_PATH = "web_export/submission_simulation.json"
 CRISIS_2020 = ("2020-01-02", "2020-06-30")
 FIRST_COMMITS = {  # provenance anchors: (role, how to find the commit)
     "preregistration": ("PREREGISTRATION.md", "first"),
+    "data": ("src/voldrag/data.py", "first"),
     "code": ("930abbd", "rev"),
     "results": ("results/results.json", "first"),
 }
@@ -194,6 +195,32 @@ def export_drag(results: dict, src: dict) -> None:
     _write("drag.json", {"cost_bp": C.BASE_COST_BP, "drag": out, "source": src})
 
 
+def export_assets_drag(results: dict, src: dict) -> None:
+    """Annual summary statistics per asset for the drag calculator. No prices, no daily returns."""
+    keys = ("n_obs", "mu_arith_pct", "mu_geom_log_pct", "sigma_pct", "theo_drag_pct")
+    stats = results["asset_statistics_secondary"]
+    _write("assets_drag.json", {
+        "period": "secondary",
+        "window": dict(zip(("start", "end"), C.PERIODS["secondary"])),
+        "definition": "emp_drag = mu_arith − mu_geom_log; theo = ½σ²",
+        "assets": {a: {k: stats[a][k] for k in keys} for a in C.ASSETS},
+        "source": src,
+    })
+
+
+def export_method() -> None:
+    """Pre-registered method constants shown as text on the site, read from config.py."""
+    cfg = ROOT / "src" / "voldrag" / "config.py"
+    names = ("RF", "W_CAP", "ALPHA", "W_ITO", "HORIZON", "CHRONOS_MODEL", "TAU_Q", "TAU_WINDOW",
+             "BASE_COST_BP", "COSTS_BP", "BOOT_B", "BOOT_BLOCK", "SEED")
+    _write("method.json", {
+        **{n: getattr(C, n) for n in names},
+        "rebalancing": "weekly + safeguard trades",
+        "notes": {"W_ITO": "rolling window = number of CVaR scenarios"},
+        "source": _source(cfg),
+    })
+
+
 def _changelog_amendments() -> list[dict]:
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     section = text.split("## Pre-results amendments", 1)[1].split("\n## ", 1)[0]
@@ -208,7 +235,8 @@ def _changelog_amendments() -> list[dict]:
 
 def _data_reference_tests() -> dict:
     proc = subprocess.run(["uv", "run", "pytest", "-q", "-p", "no:cacheprovider",
-                           "tests/test_data_reference.py"], cwd=ROOT, capture_output=True, text=True)
+                           "tests/test_data_reference.py"], cwd=ROOT, capture_output=True, text=True,
+                          check=False)
     summary = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else proc.stderr.strip()
     passed = int(m.group(1)) if (m := re.search(r"(\d+) passed", summary)) else 0
     failed = int(m.group(1)) if (m := re.search(r"(\d+) failed", summary)) else 0
@@ -268,6 +296,8 @@ def main() -> None:
     export_curves()
     export_crisis_2020(results, src)
     export_drag(results, src)
+    export_assets_drag(results, src)
+    export_method()
     export_turnover_regularization()
     export_provenance(submission)
     print(f"Wrote {sorted(p.name for p in OUT.glob('*.json'))} -> {OUT}")
