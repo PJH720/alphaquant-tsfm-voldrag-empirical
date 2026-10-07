@@ -1,0 +1,35 @@
+# Numbers that may appear on the site outside <Num>/<Txt> (scripts/verify_site_numbers.py).
+# One Python regex per line, then "  # source: …". Applied in order; a match is blanked before the
+# digit check. Results never belong here: they render through <Num src|expr> and are checked against JSON.
+(?<!\d)20\d\d년(\s?\d{1,2}월(\s?\d{1,2}일)?)?  # source: Korean dates (dateKo) of episode bounds and first triggers from crisis_2020.json / performance.json
+(?<!\d)20\d\d\.\s?\d\d\.\s?\d\d\.(\s?\d\d:\d\d)?  # source: commit timestamps (provenance.json timeline, dateTimeKo)
+(?<!\d)20\d\d-\d\d-\d\d(?!\d)  # source: ISO dates from performance.json / crisis_2020.json / submission metadata
+(?<!\d)20\d\d-\d\d(?!\d)  # source: year-month window bounds (assets_drag.json window)
+(?<!\d)20\d\d\s?[–-]\s?\d\d(?!\d)  # source: year ranges, e.g. 2015–16 warm-up (PREREGISTRATION.md §3)
+(?<![\d.])20\d\d(?![\d.])  # source: calendar years (period labels, event name, crisis year)
+(?<![\d.])\d{1,2}:\d\d(?!\d)  # source: commit times (provenance.json timeline)
+^\d\d\s?·  # source: section numbers in the eyebrows (web/src/lib/sections.ts order)
+(?<![\d.])[12]차  # source: period names, primary/secondary (PREREGISTRATION.md §3)
+§\s?\d+  # source: PREREGISTRATION.md section references
+(?<![A-Za-z0-9.])(0|5|10|20)\s?bp(?![A-Za-z0-9])  # source: cost levels (PREREGISTRATION.md §7 grid 0/10/20bp; 5bp = results/exploratory_cost_sensitivity.json)
+60/40  # source: benchmark name (PREREGISTRATION.md §4)
+1/N  # source: benchmark name, equal weight (PREREGISTRATION.md §4)
+\bL1\b  # source: name of the norm in the exploratory penalty (exploratory_turnover_regularization.json formulation)
+λ\s?=\s?1(?![\d.])  # source: Kelly λ = 1 (PREREGISTRATION.md §4, eqs. 30–31)
+λ\s?tc\s?=\s?0(?![\d.])  # source: λ_tc = 0 is the pre-registered model (no penalty); exploratory_turnover_regularization.json lambdas[0]
+12차원  # source: 12-dim safeguard state vector (PREREGISTRATION.md §6)
+β\s?>\s?0  # source: safeguard active when β > 0 (PREREGISTRATION.md §6)
+\(1 = 전액 현금\)  # source: β ∈ [0, 1], 1 = all cash (PREREGISTRATION.md §6)
+\b[0-9a-f]{7}\b  # source: short commit SHAs (provenance.json, method.json, sources)
+PJH720  # source: GitHub owner of both repositories
+95%\s?CI  # source: confidence level of the block bootstrap interval (PREREGISTRATION.md §7)
+45°  # source: identity-line label in the drag scatter
+\(초기 자산 = 1\)|\(1월 2일 = 1\)  # source: wealth normalisation of the curves (export_web.export_curves / crisis_2020.json rows)
+\(1 \+ CAGR\)  # source: analytic path formula of the submission figures
+100% = 1년에  # source: definition of annual turnover units
+차이는 0과 구별되지|0을 포함하면  # source: null hypothesis of the bootstrap test (Sharpe difference = 0)
+t\s?[+−-]\s?1\b  # source: time index notation in formulas
+\btest_[a-z_]+\b|[A-Za-z_]+\.py\b  # source: test and file names in commands
+https?://\S+  # source: URLs
+KOSPI\s?200|KOSDAQ\s?150|S&P\s?500|NASDAQ\s?100|KTB\s?10Y|\^?KQ11|\^?KS11|069500|148070|229200|102110|DEXKOUS|BAA10Y|T10Y2Y|\b21-day\b  # source: asset, ticker and FRED series names (PREREGISTRATION.md §2, CHANGELOG amendments)
+10년 자산  # source: horizon in the key name submission_simulation.json monte_carlo.strategies.*.wealth_10y
