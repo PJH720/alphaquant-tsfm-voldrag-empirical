@@ -28,10 +28,10 @@
   }
  },
  "head": {
-  "sha": "0c15bd916d06eb3a655dc877e8d407bf49b1e395",
-  "short": "0c15bd9",
-  "date": "2026-10-07T08:34:03+09:00",
-  "subject": "results: regenerate from the Linux/CUDA run; weights for both periods; exploratory 5bp cost"
+  "sha": "6f35808c15973b0a3cceb03a27bc41a7aedd2364",
+  "short": "6f35808",
+  "date": "2026-10-07T17:46:36+09:00",
+  "subject": "exploratory: full lambda_tc grid frontier (0-0.5) in one results file; export it for the site"
  },
  "amendments": [
   {
@@ -69,8 +69,8 @@
   "passed": 34,
   "failed": 0,
   "total": 34,
-  "summary": "34 passed in 0.60s",
-  "ran_at": "2026-10-07T08:34:09+09:00"
+  "summary": "34 passed in 0.58s",
+  "ran_at": "2026-10-07T17:46:41+09:00"
  },
  "submission": {
   "repo": "PJH720/alphaquant-tsfm-voldrag",

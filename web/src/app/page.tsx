@@ -1,10 +1,11 @@
 import Dashboard from "@/components/Dashboard";
 import { ModeProvider } from "@/components/Mode";
 import Nav from "@/components/Nav";
+import TurnoverRegularizationChart from "@/components/TurnoverRegularizationChart";
 import LiveLab from "@/components/LiveSimulator";
 import { sectionNumber, type SectionId } from "@/lib/sections";
 import { CostCharts, CrisisCharts, CurvesChart, DragScatter, ErgodicityBars, SignificancePlot } from "@/components/Charts";
-import { DRAG_TOLERANCE_PP, cmpWord, dragStats } from "@/lib/derived";
+import { DRAG_TOLERANCE_PP, cmpWord, dragStats, turnoverFacts } from "@/lib/derived";
 import {
   KO, PERIOD_LABEL, crisis, dateKo, dateTimeKo, fmt, pct, performance, provenance, signed, submission,
   type PeriodId,
@@ -47,6 +48,7 @@ export default function Home() {
     .map((id) => ({ id, sharpe: P.primary[String(c0)][id].sharpe }))
     .reduce((a, b) => (b.sharpe > a.sharpe ? b : a));
   const notSig = (p: PeriodId) => boot[p].ci95[0] <= 0 && boot[p].ci95[1] >= 0;
+  const tf = turnoverFacts("primary");
   const tests = provenance.data_reference_tests;
   const tl = provenance.timeline;
   const steps = [
@@ -181,6 +183,23 @@ export default function Home() {
                 <p style={{ marginBottom: 0 }}>
                   비용을 빼기 전({c0}bp)에는 실데이터 제안 모델의 {PERIOD_LABEL.primary} 샤프가 {fmt(pc("primary", c0).sharpe)}로 가장 높은 벤치마크인 {KO[bestBench0.id]}의 {fmt(bestBench0.sharpe)}보다 {cmpWord(pc("primary", c0).sharpe, bestBench0.sharpe)}다.
                   {pc("primary", c0).sharpe > bestBench0.sharpe && <> 예측 신호보다 <b>매매 빈도</b>가 성과를 잠식한다는 뜻이다.</>}
+                </p>
+              </div>
+            </div>
+            <h3 style={{ marginTop: "2rem", marginBottom: "0.8rem" }}>탐색적 분석: L1 회전율 페널티 도입 시 성과 회복 (EXPLORATORY)</h3>
+            <div className="grid-2">
+              <TurnoverRegularizationChart />
+              <div className="callout callout-explore" style={{ alignSelf: "start" }}>
+                <p style={{ margin: 0 }}>
+                  사전등록 원칙을 지키기 위해 제출본과 기본 실데이터 결과에는 λ<sub>tc</sub> = 0을 유지했다. 사후 탐색적 분석으로 목적함수에 L1 회전율 페널티를 더해 보면,
+                  처음 검토한 약한 페널티(λ<sub>tc</sub> ≤ {fmt(tf.gridMax, 3)})로는 {PERIOD_LABEL.primary}의 회전율이 {fmt(tf.r0.turnover_pct, 0)}% → {fmt(tf.rG.turnover_pct, 0)}%로
+                  {" "}{fmt(100 * (1 - tf.rG.turnover_pct / tf.r0.turnover_pct), 0)}%만 줄고 {tf.base}bp 순 샤프도 {fmt(tf.s(tf.r0))} → {fmt(tf.s(tf.rG))}로 거의 변하지 않는다.
+                </p>
+                <p style={{ marginBottom: 0 }}>
+                  페널티를 λ<sub>tc</sub> = {fmt(tf.best.lambda_tc, 1)}까지 키우면 회전율이 {fmt(tf.best.turnover_pct, 0)}%(−{fmt(100 * (1 - tf.best.turnover_pct / tf.r0.turnover_pct), 0)}%)로 떨어지고
+                  {" "}{tf.base}bp 순 샤프가 <b>{fmt(tf.s(tf.best))}</b>로 오른다. 다만 이 λ<sub>tc</sub>는 결과를 본 뒤 고른 값이고, 더 키우면(λ<sub>tc</sub> = {fmt(tf.last.lambda_tc, 1)}) 샤프가 다시 {fmt(tf.s(tf.last))}로 내려가 관계가 단조롭지 않다.
+                  세이프가드 현금 오버레이 거래 때문에 제안 모델의 회전율은 약 {fmt(tf.floor, 0)}% 아래로 내려가지 않는다(오버레이 없는 QP만은 {fmt(tf.qpBest.turnover_pct, 0)}%).
+                  사전등록 결과를 대체하지 않으며, 다음 연구에서 λ<sub>tc</sub>를 미리 등록해 검증할 가설이다.
                 </p>
               </div>
             </div>

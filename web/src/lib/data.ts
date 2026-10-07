@@ -7,6 +7,7 @@ import crisisJson from "../../public/data/crisis_2020.json";
 import dragJson from "../../public/data/drag.json";
 import provenanceJson from "../../public/data/provenance.json";
 import submissionJson from "../../public/data/submission_simulation.json";
+import turnoverRegJson from "../../public/data/exploratory_turnover_regularization.json";
 
 export type StrategyId = "6040" | "ew" | "mvo" | "ito_hist" | "ito_tsfm" | "proposed";
 export type PeriodId = "primary" | "secondary";
@@ -84,7 +85,15 @@ export interface Submission {
   illustrative_scenario: { cost_sensitivity: ({ cost_bp: number; label: string } & Record<SubStrategy, { cagr_pct: number; sharpe: number }>)[] };
 }
 
+export type TurnoverRow = { lambda_tc: number; turnover_pct: number } & Record<string, number>;
+export interface TurnoverRegularization {
+  label: string; note: string; formulation: string; lambdas: number[]; first_grid: number[];
+  costs_bp: number[]; base_cost_bp: number; strategies: Record<string, string>;
+  frontier: Record<PeriodId, Record<"proposed" | "ito_tsfm", TurnoverRow[]>>; source: Source;
+}
+
 export const performance = performanceJson as unknown as Performance;
+export const turnoverReg = turnoverRegJson as unknown as TurnoverRegularization;
 export const curves: Record<PeriodId, Curves> = {
   primary: curvesPrimaryJson as unknown as Curves,
   secondary: curvesSecondaryJson as unknown as Curves,

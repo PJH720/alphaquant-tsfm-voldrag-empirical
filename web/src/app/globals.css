@@ -286,3 +286,6 @@ input[type="url"], input[type="date"], select {
 }
 .compute { font-size: 0.75rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .lab-notice { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.88rem; margin-bottom: 1rem; }
+
+/* exploratory (not pre-registered) notes: neutral, dashed, never the reproduced/not-reproduced colors */
+.callout.callout-explore { background: var(--surface-2); border-left: 4px dashed var(--ink-3); color: var(--ink-2); }
