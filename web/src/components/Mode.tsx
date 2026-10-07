@@ -5,8 +5,8 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 export type Mode = "simulation" | "empirical";
 
 export const MODES: { id: Mode; label: string }[] = [
-  { id: "simulation", label: "제출본 시뮬레이션 (30P 논문)" },
-  { id: "empirical", label: "실데이터 사전등록 재현 (Empirical)" },
+  { id: "simulation", label: "제출본(시뮬레이션 파라미터)" },
+  { id: "empirical", label: "실데이터 · 사전등록 재현" },
 ];
 
 const Ctx = createContext<{ mode: Mode; setMode: (m: Mode) => void }>({ mode: "empirical", setMode: () => {} });
@@ -25,7 +25,7 @@ export function ModeTabs() {
       {MODES.map((m) => (
         <button
           key={m.id} type="button" role="tab" aria-selected={mode === m.id}
-          className={`mode-tab mode-${m.id}`} onClick={() => setMode(m.id)}
+          className={`mode-tab mode-${m.id}`} data-toggle="모드" onClick={() => setMode(m.id)}
         >
           <span className="dot" aria-hidden="true" />
           {m.label}

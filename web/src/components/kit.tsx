@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { KO, type Source, type StrategyId } from "@/lib/data";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { KO, type PeriodId, type StrategyId } from "@/lib/format";
+import type { Source } from "@/lib/data";
 
 type Shape = "circle" | "square" | "triangle" | "diamond" | "cross" | "none";
 
@@ -40,22 +41,22 @@ export function MarkerShape({ shape, x, y, color, size = 9 }: { shape: Shape; x:
 }
 
 /** Legend glyph: a short line in the series' dash with its marker. */
-export function SeriesGlyph({ id }: { id: StrategyId }) {
+export function SeriesGlyph({ id, color }: { id: StrategyId; color?: string }) {
   const s = STYLE[id];
   return (
     <svg width="34" height="14" aria-hidden="true">
-      <line x1="1" y1="7" x2="33" y2="7" stroke={s.color} strokeWidth={s.width} strokeDasharray={s.dash} />
-      <MarkerShape shape={s.shape} x={17} y={7} color={s.color} size={8} />
+      <line x1="1" y1="7" x2="33" y2="7" stroke={color ?? s.color} strokeWidth={s.width} strokeDasharray={s.dash} />
+      <MarkerShape shape={s.shape} x={17} y={7} color={color ?? s.color} size={8} />
     </svg>
   );
 }
 
-export function LegendToggle({ ids, visible, onToggle }: { ids: StrategyId[]; visible: Record<string, boolean>; onToggle: (id: StrategyId) => void }) {
+export function LegendToggle({ ids, visible, onToggle, color }: { ids: StrategyId[]; visible: Record<string, boolean>; onToggle: (id: StrategyId) => void; color?: (id: StrategyId) => string }) {
   return (
     <div className="legend" role="group" aria-label="전략 표시 켜기·끄기">
       {ids.map((id) => (
         <button key={id} type="button" aria-pressed={visible[id]} onClick={() => onToggle(id)}>
-          <SeriesGlyph id={id} />
+          <SeriesGlyph id={id} color={color?.(id)} />
           {KO[id]}
         </button>
       ))}
@@ -79,29 +80,26 @@ export function Footnote({ sources, extra }: { sources: Source[]; extra?: ReactN
   );
 }
 
-export function Figure({ title, caption, summary, children, footnote }: {
-  title: string; caption?: ReactNode; summary: string; children: ReactNode; footnote: ReactNode;
+export function Figure({ title, caption, children, footnote, className }: {
+  title: ReactNode; caption?: ReactNode; children: ReactNode; footnote?: ReactNode; className?: string;
 }) {
   return (
-    <figure className="figure" style={{ margin: 0 }}>
+    <figure className={`figure${className ? ` ${className}` : ""}`}>
       <h3>{title}</h3>
       {caption && <p className="cap">{caption}</p>}
-      <div role="img" aria-label={summary} className="chart">
-        {children}
-      </div>
-      <p className="sr-only">{summary}</p>
+      {children}
       {footnote}
     </figure>
   );
 }
 
 export function Toggle<T extends string>({ options, value, onChange, label }: {
-  options: { id: T; label: string }[]; value: T; onChange: (v: T) => void; label: string;
+  options: { id: T; label: ReactNode }[]; value: T; onChange: (v: T) => void; label: string;
 }) {
   return (
-    <div role="group" aria-label={label} style={{ display: "flex", gap: "0.3rem" }}>
+    <div role="group" aria-label={label} className="seg">
       {options.map((o) => (
-        <button key={o.id} type="button" aria-pressed={value === o.id} onClick={() => onChange(o.id)}>
+        <button key={o.id} type="button" aria-pressed={value === o.id} data-toggle={label} onClick={() => onChange(o.id)}>
           {o.label}
         </button>
       ))}
@@ -109,5 +107,46 @@ export function Toggle<T extends string>({ options, value, onChange, label }: {
   );
 }
 
-export const axisTick = { fill: "var(--ink-3)", fontSize: 13 };
-export const gridProps = { stroke: "var(--grid)", strokeDasharray: "0" } as const;
+export const PERIOD_OPTIONS: { id: PeriodId; label: string }[] = [
+  { id: "primary", label: "1차 (2017–)" },
+  { id: "secondary", label: "2차 (2015–)" },
+];
+
+/**
+ * Chart drawing area that mounts its (lazily imported) chart only when it nears the viewport.
+ * The box keeps its height before and after, so nothing shifts. Numbers never live in here.
+ */
+export function LazyChart({ height, label, children, minHeight }: { height: string | number; minHeight?: number; label: string; children: () => ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { setOn(true); io.disconnect(); }
+    }, { rootMargin: "400px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} role="img" aria-label={label} className="chart-area" style={{ height, minHeight }}>
+      {on ? children() : <div className="chart-ph" aria-hidden="true" />}
+    </div>
+  );
+}
+
+// ---------- shared selection: cost level and period (cost toggle §3.3 drives the λ_tc slider §3.5) ----------
+type Sel = { cost: number; setCost: (c: number) => void; period: PeriodId; setPeriod: (p: PeriodId) => void };
+const SelCtx = createContext<Sel | null>(null);
+
+export function SelectionProvider({ children, baseCost }: { children: ReactNode; baseCost: number }) {
+  const [cost, setCost] = useState(baseCost);
+  const [period, setPeriod] = useState<PeriodId>("primary");
+  return <SelCtx.Provider value={{ cost, setCost, period, setPeriod }}>{children}</SelCtx.Provider>;
+}
+
+export function useSel(): Sel {
+  const s = useContext(SelCtx);
+  if (!s) throw new Error("SelectionProvider missing");
+  return s;
+}
