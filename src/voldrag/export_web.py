@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from voldrag import config as C
+from voldrag import exploratory_turnover as TO
 from voldrag.run import LABELS
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -104,6 +105,31 @@ def _exploratory_costs() -> dict:
             "performance": {p: {c: v for c, v in costs.items() if int(c) in data["exploratory_costs_bp"]}
                             for p, costs in data["performance"].items()},
             "source": _source(path)}
+
+
+def export_turnover_regularization() -> None:
+    """EXPLORATORY L1 turnover penalty frontier (voldrag.exploratory_turnover), strategy-level only."""
+    path = RESULTS / "exploratory_turnover_regularization.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    frontier = {}
+    for period in C.PERIODS:
+        frontier[period] = {}
+        for name in data["strategies"]:
+            rows = []
+            for lam in data["lambdas"]:
+                by_cost = data["results"][str(lam)][period]
+                rows.append({"lambda_tc": lam,
+                             "turnover_pct": by_cost[str(C.BASE_COST_BP)][name]["turnover_annual_pct"],
+                             **{f"cagr_{c}bp": by_cost[str(c)][name]["cagr_pct"] for c in C.COSTS_BP},
+                             **{f"sharpe_{c}bp": by_cost[str(c)][name]["sharpe"] for c in C.COSTS_BP},
+                             **{f"mdd_{c}bp": by_cost[str(c)][name]["mdd_pct"] for c in C.COSTS_BP}})
+            frontier[period][name] = rows
+    _write("exploratory_turnover_regularization.json", {
+        "label": data["label"], "note": data["note"], "formulation": data["formulation"],
+        "lambdas": data["lambdas"], "first_grid": [x for x in TO.LAMBDAS_TC if x in data["lambdas"]],
+        "costs_bp": list(C.COSTS_BP), "base_cost_bp": C.BASE_COST_BP,
+        "strategies": data["strategies"], "frontier": frontier, "source": _source(path),
+    })
 
 
 def export_curves() -> None:
@@ -242,6 +268,7 @@ def main() -> None:
     export_curves()
     export_crisis_2020(results, src)
     export_drag(results, src)
+    export_turnover_regularization()
     export_provenance(submission)
     print(f"Wrote {sorted(p.name for p in OUT.glob('*.json'))} -> {OUT}")
 
