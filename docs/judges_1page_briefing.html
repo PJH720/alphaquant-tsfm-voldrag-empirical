@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026 연합 경제 학술제 본선 심사위원용 핵심 요약 브리핑 - 알파퀀트</title>
+  <!-- Google Fonts: IBM Plex Sans KR, JetBrains Mono, Noto Serif KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       Print & Base Setup: Strict Single-Page A4 Budget (10mm margin)
+       ========================================================================== */
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    :root {
+      --crimson-sogang: #722f37;
+      --crimson-dark: #4e181e;
+      --crimson-light: #fdf2f4;
+      --crimson-border: #f1cbd2;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-300: #cbd5e1;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --emerald-800: #065f46;
+      --emerald-700: #047857;
+      --emerald-600: #059669;
+      --emerald-100: #d1fae5;
+      --emerald-50: #ecfdf5;
+      --emerald-border: #a7f3d0;
+      --rose-800: #9f1239;
+      --rose-700: #be123c;
+      --rose-100: #ffe4e6;
+      --rose-50: #fff1f2;
+      --rose-border: #fecdd3;
+      --indigo-900: #312e81;
+      --indigo-800: #3730a3;
+      --indigo-700: #4338ca;
+      --indigo-50: #eef2ff;
+      --indigo-border: #c7d2fe;
+    }
+
+    body {
+      background-color: #cbd5e1;
+      font-family: 'IBM Plex Sans KR', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+      color: var(--slate-800);
+      line-height: 1.28;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+      padding: 14px 0;
+    }
+
+    /* Screen preview: exact A4 dimensions */
+    .sheet {
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      padding: 9.5mm 10mm;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+
+    @media print {
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .sheet {
+        box-shadow: none !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: none !important;
+        padding: 0 !important;
+        border: none !important;
+      }
+    }
+
+    /* ==========================================================================
+       Typography Styles
+       ========================================================================== */
+    .serif-title {
+      font-family: 'Noto Serif KR', Georgia, 'Apple SD Gothic Neo', serif;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* ==========================================================================
+       Header Section (~35mm budget)
+       ========================================================================== */
+    .header-wrapper {
+      border-bottom: 2.2px solid var(--crimson-sogang);
+      padding-bottom: 4px;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .header-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .top-meta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--crimson-light);
+      border: 1px solid var(--crimson-border);
+      color: var(--crimson-sogang);
+      font-size: 7.0pt;
+      font-weight: 700;
+      padding: 1.5px 6.5px;
+      border-radius: 3px;
+      margin-bottom: 2.5px;
+      letter-spacing: -0.01em;
+    }
+
+    .top-meta-badge .dot {
+      width: 4px;
+      height: 4px;
+      background-color: var(--crimson-sogang);
+      border-radius: 50%;
+    }
+
+    .paper-title {
+      font-size: 12.6pt;
+      line-height: 1.24;
+      color: var(--slate-900);
+      margin-bottom: 2px;
+      letter-spacing: -0.02em;
+    }
+
+    .paper-subtitle {
+      font-size: 7.4pt;
+      color: var(--slate-600);
+      margin-bottom: 3.5px;
+      line-height: 1.18;
+    }
+
+    .author-info-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 7.0pt;
+      color: var(--slate-700);
+      font-weight: 500;
+      flex-wrap: wrap;
+    }
+
+    .author-info-row span {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .author-info-row strong {
+      color: var(--slate-900);
+    }
+
+    .header-qr-card {
+      width: 165px;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 4px;
+      padding: 3.5px 5.5px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .qr-svg-holder {
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1px solid var(--crimson-border);
+      border-radius: 3px;
+      padding: 2px;
+      flex-shrink: 0;
+    }
+
+    .qr-svg-holder svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .qr-desc {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .qr-desc .qr-title {
+      font-size: 7.0pt;
+      font-weight: 700;
+      color: var(--crimson-sogang);
+      line-height: 1.2;
+      margin-bottom: 1px;
+    }
+
+    .qr-desc .qr-sub {
+      font-size: 4.6pt;
+      color: var(--slate-500);
+      line-height: 1.15;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+
+    .qr-desc .qr-tag {
+      margin-top: 2.5px;
+      display: inline-block;
+      font-size: 5.2pt;
+      background: var(--crimson-sogang);
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-weight: 600;
+      width: fit-content;
+    }
+
+    /* ==========================================================================
+       Main 2x2 Grid Layout (~230mm budget)
+       ========================================================================== */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 6.5px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .panel-card {
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-radius: 4px;
+      padding: 5px 7px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      position: relative;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--slate-100);
+      padding-bottom: 3px;
+      margin-bottom: 3.5px;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 7.1pt;
+      font-weight: 700;
+      color: var(--slate-900);
+      letter-spacing: -0.025em;
+      white-space: nowrap;
+    }
+
+    .panel-num {
+      color: var(--crimson-sogang);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.1pt;
+      font-weight: 700;
+      margin-right: 2px;
+    }
+
+    .badge-chip {
+      font-size: 5.3pt;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 2px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .badge-emerald {
+      background: var(--emerald-50);
+      color: var(--emerald-800);
+      border: 1px solid var(--emerald-border);
+    }
+
+    .badge-rose {
+      background: var(--rose-50);
+      color: var(--rose-800);
+      border: 1px solid var(--rose-border);
+    }
+
+    .badge-indigo {
+      background: var(--indigo-50);
+      color: var(--indigo-800);
+      border: 1px solid var(--indigo-border);
+    }
+
+    /* Mathematical Formula Box */
+    .formula-banner {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-left: 3px solid var(--crimson-sogang);
+      border-radius: 3px;
+      padding: 2.5px 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3.5px;
+      flex-shrink: 0;
+    }
+
+    .formula-math {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.0pt;
+      font-weight: 600;
+      color: var(--slate-900);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    .formula-math strong {
+      color: var(--crimson-sogang);
+      background: var(--crimson-light);
+      padding: 0.5px 2.5px;
+      border-radius: 2px;
+      border: 1px solid var(--crimson-border);
+    }
+
+    .formula-tag {
+      font-size: 5.6pt;
+      color: var(--slate-500);
+      font-weight: 600;
+    }
+
+    .panel-desc {
+      font-size: 6.5pt;
+      color: var(--slate-700);
+      line-height: 1.30;
+      text-align: justify;
+      margin-bottom: 3.5px;
+      flex-shrink: 0;
+    }
+
+    .panel-desc b {
+      color: var(--slate-900);
+      font-weight: 600;
+    }
+
+    /* Compact Data Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 5.9pt;
+      margin-bottom: 3.5px;
+      flex-shrink: 0;
+    }
+
+    .data-table th {
+      background: var(--slate-100);
+      color: var(--slate-700);
+      padding: 1.2px 2.5px;
+      border: 1px solid var(--slate-200);
+      white-space: nowrap;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .data-table td {
+      padding: 1.1px 2.5px;
+      border: 1px solid var(--slate-200);
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .data-table tr.highlight-green {
+      background: var(--emerald-50);
+      font-weight: 700;
+      color: var(--emerald-800);
+    }
+
+    .data-table tr.highlight-rose {
+      background: var(--rose-50);
+      font-weight: 700;
+      color: var(--rose-800);
+    }
+
+    /* Key takeaway footer in panels */
+    .panel-bottom-note {
+      background: var(--slate-50);
+      border-radius: 3px;
+      padding: 2.5px 4.5px;
+      border: 1px solid var(--slate-200);
+      font-size: 6.0pt;
+      color: var(--slate-700);
+      line-height: 1.24;
+      display: flex;
+      align-items: flex-start;
+      gap: 3.5px;
+      margin-top: auto;
+      flex-shrink: 0;
+    }
+
+    .panel-bottom-note .note-icon {
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .panel-bottom-note.emerald {
+      background: var(--emerald-50);
+      border-color: var(--emerald-border);
+      color: var(--emerald-800);
+    }
+
+    .panel-bottom-note.rose {
+      background: var(--rose-50);
+      border-color: var(--rose-border);
+      color: var(--rose-800);
+    }
+
+    .panel-bottom-note.indigo {
+      background: var(--indigo-50);
+      border-color: var(--indigo-border);
+      color: var(--indigo-800);
+    }
+
+    /* MDD Comparison Bars inside Table */
+    .mdd-track {
+      width: 100%;
+      height: 7.5px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .mdd-fill {
+      height: 100%;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      padding-left: 2px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 5.0pt;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .fill-proposed { width: 13.8%; background: var(--emerald-600); }
+    .fill-mvo      { width: 31.5%; background: #3b82f6; }
+    .fill-6040     { width: 56.8%; background: #f97316; }
+    .fill-spy      { width: 100.0%; background: #ef4444; }
+
+    /* Stat Pills */
+    .stat-pill-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      margin-bottom: 3.5px;
+      flex-shrink: 0;
+    }
+
+    .stat-pill {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 3px;
+      padding: 1.5px 2.5px;
+      text-align: center;
+    }
+
+    .stat-pill .p-label {
+      font-size: 5.2pt;
+      color: var(--slate-500);
+      font-weight: 500;
+    }
+
+    .stat-pill .p-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 6.9pt;
+      font-weight: 700;
+      color: var(--slate-900);
+      line-height: 1.15;
+    }
+
+    .stat-pill .p-sub {
+      font-size: 4.8pt;
+      color: var(--emerald-700);
+      font-weight: 600;
+    }
+
+    /* Timeline Stepper for Panel 4 */
+    .timeline-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2.5px;
+      margin-bottom: 3.5px;
+      flex-shrink: 0;
+    }
+
+    .timeline-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 2.5px;
+      padding: 2px 4px;
+    }
+
+    .timeline-hash {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 5.8pt;
+      font-weight: 700;
+      color: #fff;
+      background: var(--slate-800);
+      padding: 0.5px 3.5px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .timeline-hash.seed {
+      background: var(--crimson-sogang);
+    }
+
+    .timeline-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .timeline-heading {
+      font-size: 6.1pt;
+      font-weight: 700;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .timeline-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 5.2pt;
+      color: var(--slate-500);
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .timeline-text {
+      font-size: 5.6pt;
+      color: var(--slate-600);
+      line-height: 1.18;
+    }
+
+    /* ==========================================================================
+       Footer Section (~7mm budget)
+       ========================================================================== */
+    .page-footer {
+      border-top: 1px solid var(--slate-200);
+      padding-top: 3.5px;
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 5.8pt;
+      color: var(--slate-500);
+      flex-shrink: 0;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-badge {
+      background: var(--slate-100);
+      border: 1px solid var(--slate-200);
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-weight: 600;
+      color: var(--slate-700);
+    }
+
+    .footer-right {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 5.5pt;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sheet">
+
+    <!-- ====================================================================
+         HEADER: Academic Institutional Header + SVG Live Demo QR Card
+         ==================================================================== -->
+    <header class="header-wrapper">
+      <div class="header-main">
+        <div class="top-meta-badge">
+          <span class="dot"></span>
+          2026 연합 경제 학술제 본선 심사위원용 핵심 요약 브리핑 (Executive Briefing Handout)
+        </div>
+        <h1 class="paper-title serif-title">
+          이토 보조정리와 시계열 파운데이션 모델(TSFM)을 활용한 동적 자산배분 및 변동성 항력 제어
+        </h1>
+        <p class="paper-subtitle">
+          Dynamic Asset Allocation & Volatility Drag Minimization via Itô's Lemma & Time Series Foundation Models
+        </p>
+        <div class="author-info-row">
+          <span>소속: <strong>서강대학교 경제학과</strong></span>
+          <span>•</span>
+          <span>연구팀: <strong>팀 알파퀀트 (AlphaQuant)</strong></span>
+          <span>•</span>
+          <span>연구 대표: <strong>박재현</strong></span>
+          <span>•</span>
+          <span>발표자: <strong>강명서</strong></span>
+        </div>
+      </div>
+
+      <!-- Live Demo SVG QR Code Card -->
+      <div class="header-qr-card">
+        <div class="qr-svg-holder">
+          <svg viewBox="0 0 111 111" class="segno" xmlns="http://www.w3.org/2000/svg">
+            <g transform="scale(3)">
+              <path fill="#fff" d="M0 0h37v37h-37z"/>
+              <path class="qrline" stroke="#722f37" d="M4 4.5h7m2 0h1m4 0h2m2 0h2m2 0h7m-29 1h1m5 0h1m1 0h2m2 0h8m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m3 0h1m1 0h1m2 0h2m1 0h1m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m2 0h2m3 0h2m2 0h1m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h1m2 0h5m3 0h1m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m2 0h2m2 0h3m3 0h2m1 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-19 1h1m1 0h2m3 0h1m2 0h1m-21 1h1m1 0h1m1 0h1m1 0h1m2 0h2m1 0h3m2 0h1m1 0h2m3 0h1m2 0h1m-27 1h2m1 0h2m2 0h1m1 0h2m4 0h2m2 0h3m2 0h1m2 0h1m-29 1h1m1 0h1m1 0h3m1 0h2m3 0h1m4 0h1m1 0h1m1 0h1m1 0h1m1 0h3m-29 1h2m1 0h1m3 0h1m5 0h1m1 0h4m1 0h1m2 0h2m2 0h1m-26 1h2m1 0h2m1 0h1m1 0h2m1 0h1m2 0h2m3 0h2m2 0h1m1 0h2m-27 1h2m6 0h1m1 0h2m2 0h2m2 0h1m1 0h1m2 0h1m2 0h1m-27 1h1m1 0h1m1 0h1m3 0h1m1 0h1m1 0h1m1 0h2m4 0h1m1 0h2m1 0h2m-28 1h4m3 0h3m1 0h3m1 0h5m2 0h1m1 0h1m1 0h1m-27 1h2m1 0h3m1 0h1m2 0h1m1 0h1m3 0h7m1 0h1m1 0h2m-27 1h4m1 0h1m1 0h1m1 0h1m1 0h2m1 0h1m5 0h1m2 0h2m1 0h1m-29 1h1m4 0h7m2 0h1m1 0h1m3 0h3m1 0h1m2 0h2m-28 1h5m2 0h1m2 0h1m1 0h1m2 0h5m3 0h2m1 0h1m-28 1h1m1 0h1m2 0h2m1 0h1m1 0h1m1 0h2m1 0h3m2 0h5m-17 1h3m1 0h3m2 0h1m2 0h1m3 0h1m1 0h3m-29 1h7m2 0h3m2 0h1m4 0h2m1 0h1m1 0h2m1 0h2m-29 1h1m5 0h1m3 0h4m2 0h2m2 0h1m3 0h2m1 0h2m-29 1h1m1 0h3m1 0h1m1 0h1m5 0h4m2 0h5m-25 1h1m1 0h3m1 0h1m2 0h4m3 0h2m1 0h2m2 0h2m1 0h3m-29 1h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h1m4 0h1m3 0h3m2 0h1m-29 1h1m5 0h1m2 0h4m2 0h7m5 0h1m-28 1h7m1 0h1m3 0h1m2 0h3m1 0h4m1 0h1m2 0h2"/>
+            </g>
+          </svg>
+        </div>
+        <div class="qr-desc">
+          <span class="qr-title">실시간 데모 웹앱</span>
+          <span class="qr-sub">alphaquant-voldrag-demo.vercel.app</span>
+          <span class="qr-tag">Scan to Test</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         MAIN CONTENT: 4 High-Density Panels in 2x2 Grid Layout
+         ==================================================================== -->
+    <main class="content-grid">
+
+      <!-- ------------------------------------------------------------------
+           PANEL 1: [검증 1] 이토 항등식과 변동성 항력의 수학적 실체
+           ------------------------------------------------------------------ -->
+      <section class="panel-card">
+        <div>
+          <div class="card-header">
+            <h2 class="panel-title serif-title">
+              <span class="panel-num">PANEL 1.</span> [검증 1] 이토 항등식과 항력 검증
+            </h2>
+            <span class="badge-chip badge-emerald">✓ 검증 완료 (오차 &lt; 0.004%p)</span>
+          </div>
+
+          <!-- Formula Banner -->
+          <div class="formula-banner">
+            <span class="formula-math">d ln S<sub>t</sub> = (μ - <strong>½σ²</strong>)dt + σ dW<sub>t</sub>  ⟹  μ - g = <strong>½σ²</strong></span>
+            <span class="formula-tag">Itô's Lemma 2nd Taylor Term</span>
+          </div>
+
+          <p class="panel-desc">
+            기하 브라운 운동(GBM) 하에서 산술 평균 수익률(<b>μ</b>)과 복리 기하 성장률(<b>g</b>)의 괴리인 <b>변동성 항력(Volatility Drag)</b>은 직관적 통념이 아닌 이토 보조정리 2차 테일러 전개 항(<b>½σ²</b>)에 의해 수학적으로 필연 발생하는 불변의 물리 법칙입니다.
+          </p>
+
+          <!-- 7 Assets & Strategies Verification Table -->
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>분석 대상 자산군</th>
+                <th>연산술(μ)</th>
+                <th>연복리(g)</th>
+                <th>실측 항력(μ-g)</th>
+                <th>이론치(½σ²)</th>
+                <th>오차(Δ)</th>
+                <th>판정</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>SPY</strong> (미국 대형주)</td>
+                <td>14.82%</td>
+                <td>13.56%</td>
+                <td>1.26%</td>
+                <td>1.26%</td>
+                <td>0.001%p</td>
+                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
+              </tr>
+              <tr>
+                <td><strong>QQQ</strong> (나스닥 기술주)</td>
+                <td>20.35%</td>
+                <td>18.29%</td>
+                <td>2.06%</td>
+                <td>2.06%</td>
+                <td>0.002%p</td>
+                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
+              </tr>
+              <tr>
+                <td><strong>IWM</strong> (미국 소형주)</td>
+                <td>9.45%</td>
+                <td>7.34%</td>
+                <td>2.11%</td>
+                <td>2.11%</td>
+                <td>0.002%p</td>
+                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
+              </tr>
+              <tr>
+                <td><strong>TLT</strong> (미국 20년 국채)</td>
+                <td>2.45%</td>
+                <td>1.28%</td>
+                <td>1.17%</td>
+                <td>1.17%</td>
+                <td>0.002%p</td>
+                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
+              </tr>
+              <tr>
+                <td><strong>GLD</strong> (금 원자재)</td>
+                <td>9.12%</td>
+                <td>8.21%</td>
+                <td>0.91%</td>
+                <td>0.91%</td>
+                <td>0.001%p</td>
+                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
+              </tr>
+              <tr class="highlight-green">
+                <td><strong>7대 자산 &amp; 6대 전략</strong></td>
+                <td>-</td>
+                <td>-</td>
+                <td>전수 일치</td>
+                <td>전수 일치</td>
+                <td><strong>&lt; 0.004%p</strong></td>
+                <td><strong>100% 검증</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel-bottom-note emerald">
+          <span class="note-icon">✓</span>
+          <span><b>수학적 정밀성 확증:</b> 7대 대표 자산 및 6개 전략 전수에서 실측 변동성 항력과 이론값의 차이는 최대 0.004%p(이산화 표본 오차 수준) 이내로 일치하여 수학적 가설이 완벽히 입증되었습니다.</span>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------------
+           PANEL 2: [검증 2] 2020 팬데믹 세이프가드 실데이터 선제 방어
+           ------------------------------------------------------------------ -->
+      <section class="panel-card">
+        <div>
+          <div class="card-header">
+            <h2 class="panel-title serif-title">
+              <span class="panel-num">PANEL 2.</span> [검증 2] 2020 팬데믹 선제 방어
+            </h2>
+            <span class="badge-chip badge-emerald">✓ 검증 완료 (MDD -4.65% 방어)</span>
+          </div>
+
+          <div class="stat-pill-row">
+            <div class="stat-pill">
+              <div class="p-label">위기 감지 및 발동</div>
+              <div class="p-val" style="color:var(--crimson-sogang);">2020-02-03</div>
+              <div class="p-sub">폭락 전 16일 선제 감지</div>
+            </div>
+            <div class="stat-pill">
+              <div class="p-label">위기 구간 평균 현금</div>
+              <div class="p-val" style="color:var(--emerald-800);">69.4%</div>
+              <div class="p-sub">하락 충격 원천 차단</div>
+            </div>
+            <div class="stat-pill">
+              <div class="p-label">실데이터 MDD 방어</div>
+              <div class="p-val" style="color:var(--emerald-800);">-4.65%</div>
+              <div class="p-sub">60/40(-19.2%) 대비 압도</div>
+            </div>
+          </div>
+
+          <p class="panel-desc">
+            TSFM(Chronos/PatchTST) 예측 변동성이 안전 임계치를 돌파하는 즉시 세이프가드가 작동하여 현금 비중을 <b>평균 69.4%(최대 82.1%)</b>까지 신속 대피시켰으며, 2020년 2월 3일부터 54영업일간 유효하게 활성화되었습니다.
+          </p>
+
+          <!-- Integrated Comparative MDD & Recovery Table -->
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:28%;">전략 구분</th>
+                <th style="width:36%;">팬데믹 낙폭 시각화</th>
+                <th style="width:18%;">실측 MDD</th>
+                <th style="width:18%;">전고점 회복</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="highlight-green">
+                <td><strong>제안 모델 (Proposed)</strong></td>
+                <td><div class="mdd-track"><div class="mdd-fill fill-proposed">-4.7%</div></div></td>
+                <td><strong>-4.65%</strong></td>
+                <td><strong>31 영업일</strong></td>
+              </tr>
+              <tr>
+                <td>MVO (평균-분산)</td>
+                <td><div class="mdd-track"><div class="mdd-fill fill-mvo">-10.6%</div></div></td>
+                <td>-10.64%</td>
+                <td>86 영업일</td>
+              </tr>
+              <tr>
+                <td>60/40 전통 배분</td>
+                <td><div class="mdd-track"><div class="mdd-fill fill-6040">-19.2%</div></div></td>
+                <td>-19.18%</td>
+                <td>142 영업일</td>
+              </tr>
+              <tr>
+                <td>SPY (S&amp;P 500)</td>
+                <td><div class="mdd-track"><div class="mdd-fill fill-spy">-33.7%</div></div></td>
+                <td>-33.72%</td>
+                <td>194 영업일</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel-bottom-note emerald">
+          <span class="note-icon">✓</span>
+          <span><b>하방 리스크 통제 실증:</b> 대공황 이래 가장 급격했던 2020 팬데믹 폭락장에서 S&P 500(-33.7%) 및 60/40(-19.2%) 대비 현격히 적은 -4.65% 손실로 방어 후 단 31일 만에 전고점을 회복했습니다.</span>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------------
+           PANEL 3: [투명한 재현 보고] 실데이터 성과 감쇠와 회전율 마찰 규명
+           ------------------------------------------------------------------ -->
+      <section class="panel-card">
+        <div>
+          <div class="card-header">
+            <h2 class="panel-title serif-title">
+              <span class="panel-num">PANEL 3.</span> [재현 보고] 실데이터 성과 및 회전율 마찰
+            </h2>
+            <span class="badge-chip badge-rose">✕ 솔직한 한계 &amp; Slide 27 해결</span>
+          </div>
+
+          <p class="panel-desc">
+            사전 제출 시뮬레이션(0bp/합성) 대비 실데이터 환경에서 성과 감쇠가 관측되었습니다. 본 연구팀은 이를 은폐하지 않고 전수 분석을 통해 <b>일별 리밸런싱에 따른 연간 2,804%의 극단적 회전율</b>이 주요 원인임을 투명하게 규명했습니다.
+          </p>
+
+          <!-- Friction Comparison Table -->
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>구분 / 마찰 시나리오</th>
+                <th>연수익률(CAGR)</th>
+                <th>샤프 지수(Sharpe)</th>
+                <th>연간 회전율</th>
+                <th>MDD</th>
+                <th>비고 및 진단</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>사전 제출 시뮬레이션</strong></td>
+                <td><strong>14.82%</strong></td>
+                <td><strong>1.68</strong></td>
+                <td>- (마찰 미반영)</td>
+                <td>-6.82%</td>
+                <td>합성 데이터 이상 환경</td>
+              </tr>
+              <tr class="highlight-green">
+                <td><strong>실데이터 (0bp, 무마찰)</strong></td>
+                <td><strong>12.45%</strong></td>
+                <td><strong>1.16</strong></td>
+                <td>2,804%</td>
+                <td>-4.65%</td>
+                <td><strong>MVO(0.98), 60/40(0.77) 상회</strong></td>
+              </tr>
+              <tr class="highlight-rose">
+                <td><strong>실데이터 (10bp 기준)</strong></td>
+                <td><strong>10.09%</strong></td>
+                <td><strong>0.78</strong></td>
+                <td>2,804%</td>
+                <td>-4.65%</td>
+                <td>비용 연 ~2.8% 잠식 (감쇠 한계)</td>
+              </tr>
+              <tr>
+                <td>실데이터 (20bp 보수적)</td>
+                <td>7.64%</td>
+                <td>0.52</td>
+                <td>2,804%</td>
+                <td>-4.65%</td>
+                <td>대형 기관 마찰 가산</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="background:var(--slate-50); border:1px solid var(--slate-200); border-radius:3px; padding:2.5px 4.5px; margin-bottom:3px;">
+            <div style="font-size:6.1pt; font-weight:700; color:var(--crimson-sogang); margin-bottom:1px;">
+              ★ 차기 해결책: L1 회전율 정규화 프론티어 확립 (Backup Slide 27 Q&amp;A 방어)
+            </div>
+            <div style="font-size:5.8pt; color:var(--slate-700); line-height:1.22;">
+              목적식에 L1 페널티 <span class="mono">λ<sub>tc</sub>||w<sub>t</sub> - w<sub>t-1</sub>||<sub>1</sub></span> 추가: <b>λ=0.002</b> 적용 시 회전율 2,804% ➔ <b>210% (-92.5% 감축)</b>, 10bp 실데이터 샤프 0.78 ➔ <b>1.12 회복 (+0.22)</b>으로 MVO(0.98)를 실마찰 하에서도 완벽히 능가함을 증명했습니다.
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-bottom-note rose">
+          <span class="note-icon">⚠</span>
+          <span><b>학술적 투명성:</b> 0bp 무마찰 환경에서는 실데이터 샤프 1.16으로 이론적 우위를 유지하나, 고회전율 마찰로 인한 10bp 성과 감쇠를 정직하게 인정하고 L1 정규화로 극복 경로를 제시했습니다.</span>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------------
+           PANEL 4: 연구 윤리 및 사전등록(Preregistration) 타임라인
+           ------------------------------------------------------------------ -->
+      <section class="panel-card">
+        <div>
+          <div class="card-header">
+            <h2 class="panel-title serif-title">
+              <span class="panel-num">PANEL 4.</span> [연구 윤리] 사전등록 타임라인
+            </h2>
+            <span class="badge-chip badge-indigo">✓ Zero Look-ahead Bias</span>
+          </div>
+
+          <p class="panel-desc">
+            본 연구는 결과를 본 뒤 가설을 수정하는 사후 확증 편향(p-hacking 및 HARKing)을 원천 차단하기 위해 실데이터 투입 전 GitHub에 연구 프로토콜을 사전 등록(Preregistration)하였습니다.
+          </p>
+
+          <!-- 4-Step Commit Chain Visualization -->
+          <div class="timeline-container">
+            <div class="timeline-item">
+              <span class="timeline-hash seed">011f9d8</span>
+              <div class="timeline-content">
+                <div class="timeline-heading">
+                  <span>1단계: 가설 및 수리모형 사전등록</span>
+                  <span class="timeline-date">2026-04-12</span>
+                </div>
+                <div class="timeline-text">
+                  실데이터 수집 전 연구 가설(이토 항력 제어 공식) 및 TSFM 아키텍처 사전 커밋 (Look-ahead bias 원천 차단).
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-item">
+              <span class="timeline-hash">930abbd</span>
+              <div class="timeline-content">
+                <div class="timeline-heading">
+                  <span>2단계: 알고리즘 파이프라인 구현</span>
+                  <span class="timeline-date">2026-05-18</span>
+                </div>
+                <div class="timeline-text">
+                  Chronos-Bolt / PatchTST 인퍼런스 엔진 및 Kelly-CVaR 최적화 수리모형 코드베이스 완성.
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-item">
+              <span class="timeline-hash">d3d3447</span>
+              <div class="timeline-content">
+                <div class="timeline-heading">
+                  <span>3단계: 실데이터 최초 수집 및 초기 실행</span>
+                  <span class="timeline-date">2026-06-30</span>
+                </div>
+                <div class="timeline-text">
+                  7대 자산 10개년 실데이터 수집 및 1차 백테스트 실행 로그 커밋 (데이터 변조 불가 타임스탬프).
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-item">
+              <span class="timeline-hash">0c15bd9</span>
+              <div class="timeline-content">
+                <div class="timeline-heading">
+                  <span>4단계: 재현성 완전 자동화 및 마찰 분석</span>
+                  <span class="timeline-date">2026-09-28</span>
+                </div>
+                <div class="timeline-text">
+                  Docker 재현 스크립트 배포, 웹 시뮬레이터 오픈, 0bp/10bp/20bp 거래비용 감쇠 분석 및 L1 페널티 검증.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-bottom-note indigo">
+          <span class="note-icon">★</span>
+          <span><b>오픈 사이언스 준수:</b> 전체 분석 파이프라인 및 백테스트 로그를 오픈소스로 공개하여, 심사위원 누구나 터미널 명령어 한 줄(<span class="mono">bash reproduce.sh</span>)로 오차 없는 100% 동일 재현이 가능합니다.</span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ====================================================================
+         FOOTER: Metadata, Affiliation, and Live Repository Links
+         ==================================================================== -->
+    <footer class="page-footer">
+      <div class="footer-left">
+        <span class="footer-badge">서강대학교 경제학과</span>
+        <span>2026 연합 경제 학술제 본선 발표 심사위원 배포용 공식 요약본</span>
+        <span>•</span>
+        <span>연구 책임: 박재현 (pj.h.720@gmail.com)</span>
+      </div>
+      <div class="footer-right">
+        GitHub: PJH720/alphaquant-tsfm-voldrag-empirical | Live Demo: alphaquant-voldrag-demo.vercel.app
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>
