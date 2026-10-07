@@ -491,10 +491,11 @@
       color: #fff;
     }
 
-    .fill-proposed { width: 13.8%; background: var(--emerald-600); }
-    .fill-mvo      { width: 31.5%; background: #3b82f6; }
-    .fill-6040     { width: 56.8%; background: #f97316; }
-    .fill-spy      { width: 100.0%; background: #ef4444; }
+    /* Widths = episode MDD / 60/40 episode MDD (-19.18%) */
+    .fill-proposed { width: 24.2%; background: var(--emerald-600); }
+    .fill-mvo      { width: 55.5%; background: #3b82f6; }
+    .fill-ew       { width: 86.2%; background: #f59e0b; }
+    .fill-6040     { width: 100.0%; background: #ef4444; }
 
     /* Stat Pills */
     .stat-pill-row {
@@ -697,7 +698,7 @@
             <h2 class="panel-title serif-title">
               <span class="panel-num">PANEL 1.</span> [검증 1] 이토 항등식과 항력 검증
             </h2>
-            <span class="badge-chip badge-emerald">✓ 검증 완료 (오차 &lt; 0.004%p)</span>
+            <span class="badge-chip badge-emerald">✓ 실데이터 검증 (|Δ| ≤ 0.014%p)</span>
           </div>
 
           <!-- Formula Banner -->
@@ -707,76 +708,35 @@
           </div>
 
           <p class="panel-desc">
-            기하 브라운 운동(GBM) 하에서 산술 평균 수익률(<b>μ</b>)과 복리 기하 성장률(<b>g</b>)의 괴리인 <b>변동성 항력(Volatility Drag)</b>은 직관적 통념이 아닌 이토 보조정리 2차 테일러 전개 항(<b>½σ²</b>)에 의해 수학적으로 필연 발생하는 불변의 물리 법칙입니다.
+            기하 브라운 운동(GBM) 하에서 산술 평균 수익률(<b>μ</b>)과 로그 성장률(<b>g</b>)의 괴리인 <b>변동성 항력(Volatility Drag)</b>은 이토 보조정리 2차 테일러 항(<b>½σ²</b>)으로 결정됩니다. 사전등록 7개 자산(KRW 총수익률, 2015-01~2026-08) 실데이터로 검증했습니다.
           </p>
 
-          <!-- 7 Assets & Strategies Verification Table -->
+          <!-- 7 Pre-registered Assets: results/REPORT.md "Asset statistics (secondary period)" -->
           <table class="data-table">
             <thead>
               <tr>
-                <th>분석 대상 자산군</th>
+                <th>자산 (사전등록 유니버스)</th>
                 <th>연산술(μ)</th>
-                <th>연복리(g)</th>
+                <th>로그성장(g)</th>
                 <th>실측 항력(μ-g)</th>
                 <th>이론치(½σ²)</th>
-                <th>오차(Δ)</th>
-                <th>판정</th>
+                <th>|Δ|</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><strong>SPY</strong> (미국 대형주)</td>
-                <td>14.82%</td>
-                <td>13.56%</td>
-                <td>1.26%</td>
-                <td>1.26%</td>
-                <td>0.001%p</td>
-                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
-              </tr>
-              <tr>
-                <td><strong>QQQ</strong> (나스닥 기술주)</td>
-                <td>20.35%</td>
-                <td>18.29%</td>
-                <td>2.06%</td>
-                <td>2.06%</td>
-                <td>0.002%p</td>
-                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
-              </tr>
-              <tr>
-                <td><strong>IWM</strong> (미국 소형주)</td>
-                <td>9.45%</td>
-                <td>7.34%</td>
-                <td>2.11%</td>
-                <td>2.11%</td>
-                <td>0.002%p</td>
-                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
-              </tr>
-              <tr>
-                <td><strong>TLT</strong> (미국 20년 국채)</td>
-                <td>2.45%</td>
-                <td>1.28%</td>
-                <td>1.17%</td>
-                <td>1.17%</td>
-                <td>0.002%p</td>
-                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
-              </tr>
-              <tr>
-                <td><strong>GLD</strong> (금 원자재)</td>
-                <td>9.12%</td>
-                <td>8.21%</td>
-                <td>0.91%</td>
-                <td>0.91%</td>
-                <td>0.001%p</td>
-                <td style="color:var(--emerald-800); font-weight:700;">일치</td>
-              </tr>
+              <tr><td><strong>KOSPI 200</strong></td><td>18.104%</td><td>15.140%</td><td>2.964%</td><td>2.978%</td><td>0.014%p</td></tr>
+              <tr><td><strong>KOSDAQ 150</strong></td><td>9.885%</td><td>5.252%</td><td>4.633%</td><td>4.641%</td><td>0.009%p</td></tr>
+              <tr><td><strong>국고채 10년</strong></td><td>1.364%</td><td>1.215%</td><td>0.149%</td><td>0.149%</td><td>0.000%p</td></tr>
+              <tr><td><strong>S&amp;P 500</strong></td><td>17.057%</td><td>15.356%</td><td>1.701%</td><td>1.695%</td><td>0.006%p</td></tr>
+              <tr><td><strong>나스닥 100</strong></td><td>22.466%</td><td>19.891%</td><td>2.575%</td><td>2.568%</td><td>0.007%p</td></tr>
+              <tr><td><strong>금 (GLD)</strong></td><td>14.921%</td><td>13.436%</td><td>1.485%</td><td>1.479%</td><td>0.005%p</td></tr>
+              <tr><td><strong>현금 (SHV)</strong></td><td>4.513%</td><td>4.093%</td><td>0.420%</td><td>0.418%</td><td>0.001%p</td></tr>
               <tr class="highlight-green">
-                <td><strong>7대 자산 &amp; 6대 전략</strong></td>
+                <td><strong>6개 전략 (1차·10bp)</strong></td>
                 <td>-</td>
                 <td>-</td>
-                <td>전수 일치</td>
-                <td>전수 일치</td>
-                <td><strong>&lt; 0.004%p</strong></td>
-                <td><strong>100% 검증</strong></td>
+                <td colspan="2">실측 vs ½σ² 전수 비교</td>
+                <td><strong>≤ 0.005%p</strong></td>
               </tr>
             </tbody>
           </table>
@@ -784,7 +744,7 @@
 
         <div class="panel-bottom-note emerald">
           <span class="note-icon">✓</span>
-          <span><b>수학적 정밀성 확증:</b> 7대 대표 자산 및 6개 전략 전수에서 실측 변동성 항력과 이론값의 차이는 최대 0.004%p(이산화 표본 오차 수준) 이내로 일치하여 수학적 가설이 완벽히 입증되었습니다.</span>
+          <span><b>실데이터 확인:</b> 7개 자산 최대 |Δ| 0.014%p(KOSPI 200), 6개 전략 최대 0.005%p로, 일별 이산 수익률의 고차 항 수준 잔차 안에서 μ − g = ½σ²가 성립했습니다. (출처: results/REPORT.md, results.json)</span>
         </div>
       </section>
 
@@ -819,17 +779,17 @@
           </div>
 
           <p class="panel-desc">
-            TSFM(Chronos/PatchTST) 예측 변동성이 안전 임계치를 돌파하는 즉시 세이프가드가 작동하여 현금 비중을 <b>평균 69.4%(최대 82.1%)</b>까지 신속 대피시켰으며, 2020년 2월 3일부터 54영업일간 유효하게 활성화되었습니다.
+            12차원 거시 상태 벡터에 대한 <b>NDE 오토인코더</b> 재구성 오차 점수가 롤링 95분위 임계치를 돌파하자 세이프가드가 발동하여, 위기 구간 현금 비중을 <b>평균 69.4%(최대 β=1.00, 전액 현금)</b>로 대피시켰습니다. 최초 발동 2020-02-03, β&gt;0 일수 54일.
           </p>
 
-          <!-- Integrated Comparative MDD & Recovery Table -->
+          <!-- results/REPORT.md "Crisis episodes (primary run, 10bp)": 2020-02-01 ~ 2020-04-30 -->
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width:28%;">전략 구분</th>
-                <th style="width:36%;">팬데믹 낙폭 시각화</th>
-                <th style="width:18%;">실측 MDD</th>
-                <th style="width:18%;">전고점 회복</th>
+                <th style="width:28%;">전략 (1차·10bp)</th>
+                <th style="width:36%;">구간 MDD 시각화</th>
+                <th style="width:18%;">구간 MDD</th>
+                <th style="width:18%;">구간 수익률</th>
               </tr>
             </thead>
             <tbody>
@@ -837,25 +797,25 @@
                 <td><strong>제안 모델 (Proposed)</strong></td>
                 <td><div class="mdd-track"><div class="mdd-fill fill-proposed">-4.7%</div></div></td>
                 <td><strong>-4.65%</strong></td>
-                <td><strong>31 영업일</strong></td>
+                <td><strong>+2.31%</strong></td>
               </tr>
               <tr>
                 <td>MVO (평균-분산)</td>
                 <td><div class="mdd-track"><div class="mdd-fill fill-mvo">-10.6%</div></div></td>
                 <td>-10.64%</td>
-                <td>86 영업일</td>
+                <td>-1.82%</td>
+              </tr>
+              <tr>
+                <td>동일가중 (1/N)</td>
+                <td><div class="mdd-track"><div class="mdd-fill fill-ew">-16.5%</div></div></td>
+                <td>-16.54%</td>
+                <td>-0.21%</td>
               </tr>
               <tr>
                 <td>60/40 전통 배분</td>
                 <td><div class="mdd-track"><div class="mdd-fill fill-6040">-19.2%</div></div></td>
                 <td>-19.18%</td>
-                <td>142 영업일</td>
-              </tr>
-              <tr>
-                <td>SPY (S&amp;P 500)</td>
-                <td><div class="mdd-track"><div class="mdd-fill fill-spy">-33.7%</div></div></td>
-                <td>-33.72%</td>
-                <td>194 영업일</td>
+                <td>-5.50%</td>
               </tr>
             </tbody>
           </table>
@@ -863,7 +823,7 @@
 
         <div class="panel-bottom-note emerald">
           <span class="note-icon">✓</span>
-          <span><b>하방 리스크 통제 실증:</b> 대공황 이래 가장 급격했던 2020 팬데믹 폭락장에서 S&P 500(-33.7%) 및 60/40(-19.2%) 대비 현격히 적은 -4.65% 손실로 방어 후 단 31일 만에 전고점을 회복했습니다.</span>
+          <span><b>위기 구간(2020-02-01~04-30) 방어:</b> 60/40(-19.18%)·MVO(-10.64%) 대비 MDD -4.65%, 구간 수익률 +2.31%. 단, 2022 긴축기에는 MDD -9.54%로 MVO(-8.05%)보다 컸습니다.</span>
         </div>
       </section>
 
@@ -876,74 +836,74 @@
             <h2 class="panel-title serif-title">
               <span class="panel-num">PANEL 3.</span> [재현 보고] 실데이터 성과 및 회전율 마찰
             </h2>
-            <span class="badge-chip badge-rose">✕ 솔직한 한계 &amp; Slide 27 해결</span>
+            <span class="badge-chip badge-rose">✕ 솔직한 한계 보고</span>
           </div>
 
           <p class="panel-desc">
-            사전 제출 시뮬레이션(0bp/합성) 대비 실데이터 환경에서 성과 감쇠가 관측되었습니다. 본 연구팀은 이를 은폐하지 않고 전수 분석을 통해 <b>일별 리밸런싱에 따른 연간 2,804%의 극단적 회전율</b>이 주요 원인임을 투명하게 규명했습니다.
+            사전 제출 시뮬레이션 대비 실데이터(1차 기간 2017-01~2026-08, 완전 표본외)에서 성과 감쇠가 관측되었습니다. 원인은 <b>주간 재최적화와 세이프가드 거래에 따른 연간 2,804%의 회전율</b>입니다(회전율 × 10bp ≈ 연 2.8%p 비용).
           </p>
 
-          <!-- Friction Comparison Table -->
+          <!-- results/REPORT.md "Transaction-cost sensitivity" + results.json performance.primary -->
           <table class="data-table">
             <thead>
               <tr>
-                <th>구분 / 마찰 시나리오</th>
-                <th>연수익률(CAGR)</th>
-                <th>샤프 지수(Sharpe)</th>
+                <th>구분 / 비용</th>
+                <th>CAGR</th>
+                <th>Sharpe</th>
                 <th>연간 회전율</th>
-                <th>MDD</th>
-                <th>비고 및 진단</th>
+                <th>전기간 MDD</th>
+                <th>비교</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><strong>사전 제출 시뮬레이션</strong></td>
+                <td><strong>제출본 시뮬레이션</strong></td>
                 <td><strong>14.82%</strong></td>
                 <td><strong>1.68</strong></td>
-                <td>- (마찰 미반영)</td>
-                <td>-6.82%</td>
-                <td>합성 데이터 이상 환경</td>
+                <td>-</td>
+                <td>-8.34%</td>
+                <td>시뮬레이션 파라미터</td>
               </tr>
               <tr class="highlight-green">
-                <td><strong>실데이터 (0bp, 무마찰)</strong></td>
-                <td><strong>12.45%</strong></td>
+                <td><strong>실데이터 0bp</strong></td>
+                <td><strong>15.11%</strong></td>
                 <td><strong>1.16</strong></td>
                 <td>2,804%</td>
-                <td>-4.65%</td>
-                <td><strong>MVO(0.98), 60/40(0.77) 상회</strong></td>
+                <td>-19.31%</td>
+                <td><strong>MVO 0.98 · 60/40 0.78 상회</strong></td>
               </tr>
               <tr class="highlight-rose">
-                <td><strong>실데이터 (10bp 기준)</strong></td>
-                <td><strong>10.09%</strong></td>
-                <td><strong>0.78</strong></td>
+                <td><strong>실데이터 10bp (기준)</strong></td>
+                <td><strong>11.91%</strong></td>
+                <td><strong>0.90</strong></td>
                 <td>2,804%</td>
-                <td>-4.65%</td>
-                <td>비용 연 ~2.8% 잠식 (감쇠 한계)</td>
+                <td>-19.67%</td>
+                <td>MVO 0.91과 유의차 없음</td>
               </tr>
               <tr>
-                <td>실데이터 (20bp 보수적)</td>
-                <td>7.64%</td>
-                <td>0.52</td>
+                <td>실데이터 20bp</td>
+                <td>8.81%</td>
+                <td>0.64</td>
                 <td>2,804%</td>
-                <td>-4.65%</td>
-                <td>대형 기관 마찰 가산</td>
+                <td>-20.04%</td>
+                <td>MVO 0.84</td>
               </tr>
             </tbody>
           </table>
 
           <div style="background:var(--slate-50); border:1px solid var(--slate-200); border-radius:3px; padding:2.5px 4.5px; margin-bottom:3px;">
             <div style="font-size:6.1pt; font-weight:700; color:var(--crimson-sogang); margin-bottom:1px;">
-              ★ 차기 해결책: L1 회전율 정규화 프론티어 확립 (Backup Slide 27 Q&amp;A 방어)
+              ◆ 탐색 분석 (사전등록 외, PREREG §8): L1 회전율 페널티 — Backup Slide 27
             </div>
             <div style="font-size:5.8pt; color:var(--slate-700); line-height:1.22;">
-              목적식에 L1 페널티 <span class="mono">λ<sub>tc</sub>||w<sub>t</sub> - w<sub>t-1</sub>||<sub>1</sub></span> 추가: <b>λ=0.002</b> 적용 시 회전율 2,804% ➔ <b>210% (-92.5% 감축)</b>, 10bp 실데이터 샤프 0.78 ➔ <b>1.12 회복 (+0.22)</b>으로 MVO(0.98)를 실마찰 하에서도 완벽히 능가함을 증명했습니다.
+              목적식에 <span class="mono">λ<sub>tc</sub>||w<sub>t</sub> - w<sub>t-1</sub>||<sub>1</sub></span> 추가. λ≤0.005에서는 회전율 -12%, 10bp 샤프 0.90으로 변화 없음. 격자 최고점 λ=0.2에서 회전율 509%(-81.8%), 샤프 1.15. 단, <b>결과를 본 뒤 정한 격자</b>이고 반응이 비단조적(λ=0.05: 0.92, λ=0.5: 0.91)이라 성과로 주장하지 않고 차기 사전등록 검증 과제로 둡니다. 회전율 원인: Chronos μ̂의 주간 변동(같은 QP에서 역사적 μ 대비 <b>4.0배</b>)과 세이프가드 거래(λ=0.5에서 QP 단독 29% vs 493%).
             </div>
           </div>
         </div>
 
         <div class="panel-bottom-note rose">
           <span class="note-icon">⚠</span>
-          <span><b>학술적 투명성:</b> 0bp 무마찰 환경에서는 실데이터 샤프 1.16으로 이론적 우위를 유지하나, 고회전율 마찰로 인한 10bp 성과 감쇠를 정직하게 인정하고 L1 정규화로 극복 경로를 제시했습니다.</span>
+          <span><b>학술적 투명성:</b> 0bp에서는 샤프 1.16으로 MVO·60/40을 상회하나, 10bp에서는 0.90으로 MVO(0.91)와 통계적 유의차가 없습니다(블록 부트스트랩 ΔSharpe -0.013, p=0.96). 이를 숨기지 않고 원인을 규명했습니다.</span>
         </div>
       </section>
 
@@ -970,7 +930,7 @@
               <div class="timeline-content">
                 <div class="timeline-heading">
                   <span>1단계: 가설 및 수리모형 사전등록</span>
-                  <span class="timeline-date">2026-04-12</span>
+                  <span class="timeline-date">2026-10-07 01:52</span>
                 </div>
                 <div class="timeline-text">
                   실데이터 수집 전 연구 가설(이토 항력 제어 공식) 및 TSFM 아키텍처 사전 커밋 (Look-ahead bias 원천 차단).
@@ -983,10 +943,10 @@
               <div class="timeline-content">
                 <div class="timeline-heading">
                   <span>2단계: 알고리즘 파이프라인 구현</span>
-                  <span class="timeline-date">2026-05-18</span>
+                  <span class="timeline-date">2026-10-07 02:04</span>
                 </div>
                 <div class="timeline-text">
-                  Chronos-Bolt / PatchTST 인퍼런스 엔진 및 Kelly-CVaR 최적화 수리모형 코드베이스 완성.
+                  Chronos-Bolt 제로샷 인퍼런스 엔진 및 Kelly-CVaR 최적화 수리모형 코드베이스 완성.
                 </div>
               </div>
             </div>
@@ -995,11 +955,11 @@
               <span class="timeline-hash">d3d3447</span>
               <div class="timeline-content">
                 <div class="timeline-heading">
-                  <span>3단계: 실데이터 최초 수집 및 초기 실행</span>
-                  <span class="timeline-date">2026-06-30</span>
+                  <span>3단계: 사전등록 실데이터 최초 실행</span>
+                  <span class="timeline-date">2026-10-07 02:06</span>
                 </div>
                 <div class="timeline-text">
-                  7대 자산 10개년 실데이터 수집 및 1차 백테스트 실행 로그 커밋 (데이터 변조 불가 타임스탬프).
+                  사전등록 하이퍼파라미터 그대로 7개 자산 실데이터 첫 백테스트 결과 커밋 (git 타임스탬프로 순서 검증 가능).
                 </div>
               </div>
             </div>
@@ -1008,11 +968,11 @@
               <span class="timeline-hash">0c15bd9</span>
               <div class="timeline-content">
                 <div class="timeline-heading">
-                  <span>4단계: 재현성 완전 자동화 및 마찰 분석</span>
-                  <span class="timeline-date">2026-09-28</span>
+                  <span>4단계: Linux/CUDA 교차 재현</span>
+                  <span class="timeline-date">2026-10-07 08:34</span>
                 </div>
                 <div class="timeline-text">
-                  Docker 재현 스크립트 배포, 웹 시뮬레이터 오픈, 0bp/10bp/20bp 거래비용 감쇠 분석 및 L1 페널티 검증.
+                  Ubuntu+CUDA에서 전체 재실행해 결과 재생성(교차 플랫폼 재현). 이후 웹 데모와 L1 페널티 탐색 분석(사전등록 외)을 별도 커밋으로 추가.
                 </div>
               </div>
             </div>
@@ -1021,7 +981,7 @@
 
         <div class="panel-bottom-note indigo">
           <span class="note-icon">★</span>
-          <span><b>오픈 사이언스 준수:</b> 전체 분석 파이프라인 및 백테스트 로그를 오픈소스로 공개하여, 심사위원 누구나 터미널 명령어 한 줄(<span class="mono">bash reproduce.sh</span>)로 오차 없는 100% 동일 재현이 가능합니다.</span>
+          <span><b>오픈 사이언스 준수:</b> 전체 분석 파이프라인과 결과(results/REPORT.md)를 오픈소스로 공개하여, 심사위원 누구나 명령어 한 줄(<span class="mono">uv run python -m voldrag.run</span>)로 재현할 수 있습니다. 사전등록 외 분석은 모두 '탐색적'으로 표기합니다.</span>
         </div>
       </section>
 

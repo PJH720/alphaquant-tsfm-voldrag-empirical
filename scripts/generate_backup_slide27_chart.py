@@ -1,579 +1,405 @@
 #!/usr/bin/env python3
 """generate_backup_slide27_chart.py
 
-Publication-quality 16:9 chart generator for Backup Slide 27:
-"L1 Turnover Regularization Frontier (Trading Friction Post-Mortem & Defense)".
+Backup Slide 27 chart: L1 turnover-penalty grid (EXPLORATORY).
 
-Dual Y-Axis Plot:
-  - X-Axis: Lambda Turnover Penalty (0.0 to 0.0050)
-  - Left Y-Axis: Net Sharpe Ratio (10bp transaction cost) [Navy/Blue]
-  - Right Y-Axis: Annual Turnover (%) [Crimson/Coral Dotted Line]
+Every plotted number is read from the empirical results files; nothing is
+hard-coded, and the script exits with an error if either file is missing.
 
-Outputs:
-  - backup_slide27_turnover_frontier.png (Light theme, 300 DPI)
-  - backup_slide27_turnover_frontier_dark.png (Dark theme, 300 DPI)
+  - results/exploratory_turnover_regularization.json : full lambda_tc grid
+    (0 ... 0.5). Not pre-registered (PREREGISTRATION.md §8): the grid was chosen
+    after the results were seen. lambda_tc = 0 reproduces results/results.json.
+  - results/results.json : pre-registered run (benchmark Sharpe ratios and
+    per-strategy annual turnover).
 
-Saved to:
-  1. iCloud Presentation Folder (Vault_Inbox/.../발표자료/)
-  2. Local repo results/
+Series: primary period (2017-01-02 -> 2026-08-31, fully out-of-sample),
+10bp cost, strategy `proposed` (Itô-Kelly + Chronos + NDE safeguard), with
+`ito_tsfm` (same QP, no safeguard) used to separate QP turnover from
+safeguard turnover.
+
+Outputs (16:9, 300 DPI):
+  - backup_slide27_turnover_frontier.png       (light theme)
+  - backup_slide27_turnover_frontier_dark.png  (dark theme)
 """
 
 import argparse
 import json
-import os
-import sys
+import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 
 # ---------------------------------------------------------------------------
-# Default Paths
+# Paths
 # ---------------------------------------------------------------------------
 DEFAULT_ICLOUD_DIR = Path(
-    "/Users/pj/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vault_Inbox/261007) 경제 학술 회의 제출 기한/발표자료"
+    "/Users/pj/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vault_Inbox/261007) 경제 학술 회의 제출 기한/발표자료"
 )
-CANDIDATE_JSON_PATHS = [
-    Path("results/exploratory_turnover_penalty.json"),
-    Path("/Users/pj/dev/alphaquant-tsfm-voldrag-empirical/results/exploratory_turnover_penalty.json"),
-    Path("/Users/pj/dev/alphaquant-tsfm-voldrag/results/exploratory_turnover_penalty.json"),
-]
+EMPIRICAL_RESULTS_DIR = Path("/Users/pj/dev/alphaquant-tsfm-voldrag-empirical/results")
+MAIN_REPO_RESULTS_DIR = Path("/Users/pj/dev/alphaquant-tsfm-voldrag/results")
+FRONTIER_CANDIDATES = (
+    Path("results/exploratory_turnover_regularization.json"),
+    EMPIRICAL_RESULTS_DIR / "exploratory_turnover_regularization.json",
+)
+RESULTS_CANDIDATES = (
+    Path("results/results.json"),
+    EMPIRICAL_RESULTS_DIR / "results.json",
+)
+LIGHT_FILENAME = "backup_slide27_turnover_frontier.png"
+DARK_FILENAME = "backup_slide27_turnover_frontier_dark.png"
 
 # ---------------------------------------------------------------------------
-# Stylized Presentation Dataset (Target frontier specified for Slide 27 Q&A)
+# Which slice of the results is plotted
 # ---------------------------------------------------------------------------
-STYLIZED_DATA = {
-    "lambdas": [0.0, 0.0005, 0.0010, 0.0020, 0.0035, 0.0050],
-    "turnover_pct": [2804.4, 1420.0, 680.0, 210.0, 145.0, 110.0],
-    "net_sharpe_10bp": [0.900, 0.985, 1.065, 1.120, 1.085, 1.015],
+PERIOD = "primary"
+COST_BP = "10"
+STRATEGY = "proposed"
+QP_ONLY_STRATEGY = "ito_tsfm"
+BENCHMARKS = (("mvo", "MVO"), ("ew", "Equal weight"), ("6040", "60/40"))
+BENCHMARK_LINESTYLES = (":", "-.", "--")
+TURNOVER_STRATEGIES = (
+    ("6040", "60/40"),
+    ("ew", "Equal weight"),
+    ("ito_hist", "Itô-Kelly QP\n(historical μ)"),
+    ("mvo", "MVO"),
+    ("ito_tsfm", "Itô-Kelly QP\n(Chronos μ)"),
+    ("proposed", "Proposed\n(+ NDE safeguard)"),
+)
+HIGHLIGHTED_STRATEGIES = frozenset({"ito_tsfm", "proposed"})
+MATCH_TOLERANCE = 1e-9
+
+THEMES = {
+    "light": {
+        "fig_bg": "#ffffff",
+        "ax_bg": "#f8fafc",
+        "text": "#0f172a",
+        "text_muted": "#475569",
+        "grid": "#e2e8f0",
+        "spine": "#cbd5e1",
+        "sharpe": "#1e3a8a",
+        "turnover": "#dc2626",
+        "bench": "#64748b",
+        "bar_muted": "#94a3b8",
+        "marker_edge": "#ffffff",
+        "highlight": "#059669",
+        "box_bg": "#fff7ed",
+        "box_edge": "#ea580c",
+        "badge_bg": "#f1f5f9",
+    },
+    "dark": {
+        "fig_bg": "#0b0f19",
+        "ax_bg": "#111827",
+        "text": "#f8fafc",
+        "text_muted": "#94a3b8",
+        "grid": "#1f2937",
+        "spine": "#374151",
+        "sharpe": "#38bdf8",
+        "turnover": "#f87171",
+        "bench": "#94a3b8",
+        "bar_muted": "#475569",
+        "marker_edge": "#0b0f19",
+        "highlight": "#10b981",
+        "box_bg": "#2a1a0e",
+        "box_edge": "#fb923c",
+        "badge_bg": "#1e293b",
+    },
 }
 
 
-def load_frontier_data(json_path: Path | None, mode: str = "presentation"):
-    """Load turnover regularization frontier data from JSON or fallback."""
-    if mode == "presentation":
-        print("[INFO] Using presentation target frontier dataset (matches Slide 27 Q&A defense).")
-        return (
-            np.array(STYLIZED_DATA["lambdas"]),
-            np.array(STYLIZED_DATA["turnover_pct"]),
-            np.array(STYLIZED_DATA["net_sharpe_10bp"]),
-            True,  # is_stylized
-        )
+@dataclass(frozen=True)
+class Frontier:
+    lambdas: np.ndarray
+    turnover_pct: np.ndarray
+    sharpe: np.ndarray
 
-    # Attempt to locate JSON file
-    target_path = None
-    if json_path and json_path.exists():
-        target_path = json_path
-    else:
-        for p in CANDIDATE_JSON_PATHS:
-            if p.exists():
-                target_path = p
-                break
 
-    if target_path and target_path.exists():
-        print(f"[INFO] Loading empirical data from {target_path}")
+# ---------------------------------------------------------------------------
+# Data loading (fail closed: no fallback data)
+# ---------------------------------------------------------------------------
+def resolve_input(explicit: Path | None, candidates: tuple[Path, ...], label: str) -> Path:
+    paths = (explicit,) if explicit else candidates
+    for path in paths:
+        if path.exists():
+            return path
+    tried = ", ".join(str(p) for p in paths)
+    raise SystemExit(f"[ERROR] {label} not found (tried: {tried}). Refusing to plot without data.")
+
+
+def read_json(path: Path) -> dict:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"[ERROR] Cannot read {path}: {exc}") from exc
+
+
+def load_frontier(data: dict, path: Path, strategy: str) -> Frontier:
+    rows = []
+    for lam in data.get("lambdas", []):
         try:
-            with open(target_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            node = data["results"][str(lam)][PERIOD][COST_BP][strategy]
+        except KeyError as exc:
+            raise SystemExit(
+                f"[ERROR] {path}: missing results[{lam}][{PERIOD}][{COST_BP}][{strategy}] ({exc})"
+            ) from exc
+        rows.append((float(lam), float(node["turnover_annual_pct"]), float(node["sharpe"])))
 
-            lambdas = []
-            turnovers = []
-            sharpes = []
-
-            for lam in data.get("lambdas", []):
-                slam = str(lam)
-                if "results" in data and slam in data["results"]:
-                    res_node = data["results"][slam]["primary"]["10"]
-                    # Proposed strategy preferred
-                    strat = res_node.get("proposed") or res_node.get("ito_tsfm")
-                    if strat:
-                        lambdas.append(float(lam))
-                        turnovers.append(float(strat.get("turnover_annual_pct", 0)))
-                        sharpes.append(float(strat.get("sharpe", 0)))
-
-            if len(lambdas) >= 3:
-                return np.array(lambdas), np.array(turnovers), np.array(sharpes), False
-        except Exception as e:
-            print(f"[WARN] Failed to parse JSON ({e}). Falling back to presentation data.")
-
-    print("[INFO] JSON not found or incomplete. Falling back to presentation target data.")
-    return (
-        np.array(STYLIZED_DATA["lambdas"]),
-        np.array(STYLIZED_DATA["turnover_pct"]),
-        np.array(STYLIZED_DATA["net_sharpe_10bp"]),
-        True,
-    )
+    rows.sort()
+    if len(rows) < 2 or rows[0][0] != 0.0:
+        raise SystemExit(f"[ERROR] {path}: need lambda_tc = 0 plus at least one penalised point.")
+    lambdas, turnover, sharpe = (np.array(col) for col in zip(*rows))
+    return Frontier(lambdas=lambdas, turnover_pct=turnover, sharpe=sharpe)
 
 
-def setup_typography():
-    """Configure cross-platform typography with Korean support."""
-    font_candidates = [
-        "Apple SD Gothic Neo",
-        "Helvetica Neue",
-        "Arial",
-        "sans-serif",
-    ]
-    plt.rcParams["font.family"] = font_candidates
+def load_performance(path: Path) -> dict:
+    data = read_json(path)
+    required = {key for key, _ in BENCHMARKS} | {key for key, _ in TURNOVER_STRATEGIES}
+    try:
+        perf = data["performance"][PERIOD][COST_BP]
+        missing = [
+            key for key in sorted(required)
+            if "sharpe" not in perf[key] or "turnover_annual_pct" not in perf[key]
+        ]
+    except KeyError as exc:
+        raise SystemExit(f"[ERROR] {path}: missing performance[{PERIOD}][{COST_BP}] entry ({exc})") from exc
+    if missing:
+        raise SystemExit(f"[ERROR] {path}: sharpe/turnover missing for {missing}")
+    return perf
+
+
+def check_baseline(frontier: Frontier, perf: dict) -> None:
+    """lambda_tc = 0 must reproduce the pre-registered run exactly."""
+    expected = perf[STRATEGY]
+    sharpe_ok = abs(frontier.sharpe[0] - expected["sharpe"]) < MATCH_TOLERANCE
+    turnover_ok = abs(frontier.turnover_pct[0] - expected["turnover_annual_pct"]) < MATCH_TOLERANCE
+    if not (sharpe_ok and turnover_ok):
+        raise SystemExit(
+            "[ERROR] lambda_tc = 0 does not match results.json "
+            f"(sharpe {frontier.sharpe[0]} vs {expected['sharpe']}, "
+            f"turnover {frontier.turnover_pct[0]} vs {expected['turnover_annual_pct']})."
+        )
+    print("[CHECK] lambda_tc = 0 matches the pre-registered results.json.")
+
+
+# ---------------------------------------------------------------------------
+# Plotting
+# ---------------------------------------------------------------------------
+def setup_typography() -> None:
+    plt.rcParams["font.family"] = ["Apple SD Gothic Neo", "Helvetica Neue", "Arial", "sans-serif"]
     plt.rcParams["axes.unicode_minus"] = False
 
 
-def create_frontier_plot(
-    lambdas: np.ndarray,
-    turnovers: np.ndarray,
-    sharpes: np.ndarray,
-    is_stylized: bool,
-    theme: str = "light",
-    output_path: Path | None = None,
-):
-    """Render 16:9 publication-quality dual Y-axis plot."""
-    setup_typography()
+def style_axis(ax, c: dict) -> None:
+    ax.set_facecolor(c["ax_bg"])
+    ax.spines["top"].set_visible(False)
+    for side in ("left", "bottom", "right"):
+        ax.spines[side].set_color(c["spine"])
+        ax.spines[side].set_linewidth(1.2)
 
-    # Colors definition based on theme
-    if theme == "dark":
-        bg_fig = "#0b0f19"  # Midnight dark
-        bg_ax = "#111827"   # Slate 900
-        text_primary = "#f8fafc"
-        text_secondary = "#94a3b8"
-        grid_color = "#1f2937"
-        spine_color = "#374151"
 
-        # Series colors
-        c_sharpe = "#38bdf8"       # Bright Sky Blue
-        c_sharpe_dot = "#0284c7"
-        c_turnover = "#f87171"     # Vibrant Coral Red
-        c_turnover_dot = "#ef4444"
-
-        # Callout colors
-        c_callout1_bg = "#1e1b2e"
-        c_callout1_ec = "#f43f5e"
-        c_callout2_bg = "#064e3b"
-        c_callout2_ec = "#10b981"
-        c_mvo_line = "#64748b"
-    else:  # Light theme
-        bg_fig = "#ffffff"
-        bg_ax = "#f8fafc"   # Soft slate 50
-        text_primary = "#0f172a"
-        text_secondary = "#475569"
-        grid_color = "#e2e8f0"
-        spine_color = "#cbd5e1"
-
-        # Series colors
-        c_sharpe = "#1e3a8a"       # Deep Navy Blue
-        c_sharpe_dot = "#2563eb"
-        c_turnover = "#dc2626"     # Strong Crimson Red
-        c_turnover_dot = "#b91c1c"
-
-        # Callout colors
-        c_callout1_bg = "#fef2f2"
-        c_callout1_ec = "#ef4444"
-        c_callout2_bg = "#ecfdf5"
-        c_callout2_ec = "#059669"
-        c_mvo_line = "#64748b"
-
-    # Figure 16:9 aspect ratio
-    fig, ax1 = plt.subplots(figsize=(15.5, 8.72), dpi=300)
-    fig.patch.set_facecolor(bg_fig)
-    ax1.set_facecolor(bg_ax)
-
-    # Twin axis
+def plot_frontier(ax1, frontier: Frontier, perf: dict, c: dict) -> list:
+    """Grid points are evenly spaced (the lambda grid is not uniform)."""
+    x = np.arange(len(frontier.lambdas))
     ax2 = ax1.twinx()
-
-    # Z-order management so lines and markers render above grid
-    ax1.set_zorder(ax2.get_zorder() + 2)
+    style_axis(ax2, c)
+    ax1.set_zorder(ax2.get_zorder() + 1)
     ax1.patch.set_visible(False)
 
-    # -----------------------------------------------------------------------
-    # Smooth Spline Interpolation for Continuous Curve Rendering
-    # -----------------------------------------------------------------------
-    x_fine = np.linspace(lambdas.min(), lambdas.max(), 300)
-
-    # Polynomial / spline fit for smooth aesthetic curves
-    z_sharpe = np.polyfit(lambdas, sharpes, deg=min(4, len(lambdas) - 1))
-    p_sharpe = np.poly1d(z_sharpe)
-    y_sharpe_fine = p_sharpe(x_fine)
-    # Ensure curve passes near raw points
-    y_sharpe_fine[0] = sharpes[0]
-
-    # Smooth curve for turnover
-    z_to = np.polyfit(lambdas, np.log(np.maximum(turnovers, 10)), deg=min(3, len(lambdas) - 1))
-    y_to_fine = np.exp(np.poly1d(z_to)(x_fine))
-    y_to_fine[0] = turnovers[0]
-
-    # -----------------------------------------------------------------------
-    # Plot Series
-    # -----------------------------------------------------------------------
-    # Left Axis: Net Sharpe (Solid Line)
     line_sharpe, = ax1.plot(
-        x_fine,
-        y_sharpe_fine,
-        color=c_sharpe,
-        linewidth=3.5,
-        label="Net Sharpe Ratio (10bp transaction cost) [Left Axis]",
-        solid_capstyle="round",
+        x, frontier.sharpe, color=c["sharpe"], linewidth=3.0, marker="o", markersize=9,
+        markeredgecolor=c["marker_edge"], markeredgewidth=2.0,
+        label="Proposed: net Sharpe, 10bp [left axis]",
     )
-    # Scatter points for actual evaluated points
-    sc_sharpe = ax1.scatter(
-        lambdas,
-        sharpes,
-        color=c_sharpe_dot,
-        s=110,
-        edgecolors="white",
-        linewidths=2.2,
-        zorder=5,
+    best = int(np.argmax(frontier.sharpe))
+    for i, (xi, value) in enumerate(zip(x, frontier.sharpe)):
+        ax1.annotate(f"{value:.2f}", (xi, value), xytext=(0, 18 if i == best else 11),
+                     textcoords="offset points", ha="center", fontsize=9.5, fontweight="bold",
+                     color=c["sharpe"])
+    line_turnover, = ax2.plot(
+        x, frontier.turnover_pct, color=c["turnover"], linewidth=2.6, linestyle="--", marker="s",
+        markersize=8, markeredgecolor=c["marker_edge"], markeredgewidth=1.8,
+        label="Proposed: annual turnover % [right axis]",
     )
+    bench_lines = [
+        ax1.axhline(
+            perf[key]["sharpe"], color=c["bench"], linestyle=style, linewidth=1.6, alpha=0.9,
+            label=f"{name} net Sharpe, 10bp = {perf[key]['sharpe']:.2f}",
+        )
+        for (key, name), style in zip(BENCHMARKS, BENCHMARK_LINESTYLES)
+    ]
 
-    # Right Axis: Annual Turnover (Dotted Line)
-    line_to, = ax2.plot(
-        x_fine,
-        y_to_fine,
-        color=c_turnover,
-        linewidth=3.0,
-        linestyle="--",
-        dashes=(5, 3),
-        label="Annual Turnover (%) [Right Axis]",
-    )
-    sc_to = ax2.scatter(
-        lambdas,
-        turnovers,
-        color=c_turnover_dot,
-        marker="s",
-        s=95,
-        edgecolors="white",
-        linewidths=2.0,
-        zorder=4,
-    )
+    ax1.scatter([x[best]], [frontier.sharpe[best]], s=420, facecolors="none",
+                edgecolors=c["highlight"], linewidths=2.6, zorder=6)
 
-    # Benchmark lines (MVO Sharpe = 0.98, 60/40 Sharpe = 0.77)
-    mvo_ref = ax1.axhline(
-        0.98,
-        color=c_mvo_line,
-        linestyle=":",
-        linewidth=1.8,
-        label="MVO Benchmark Net Sharpe (10bp) = 0.98",
-        alpha=0.85,
-    )
-    bench_6040 = ax1.axhline(
-        0.77,
-        color="#94a3b8" if theme == "light" else "#475569",
-        linestyle="--",
-        linewidth=1.4,
-        label="60/40 Benchmark Net Sharpe (10bp) = 0.77",
-        alpha=0.75,
-    )
+    sharpe_values = [*frontier.sharpe, *(perf[key]["sharpe"] for key, _ in BENCHMARKS)]
+    ax1.set_ylim(min(sharpe_values) - 0.30, max(sharpe_values) + 0.12)
+    ax2.set_ylim(0, frontier.turnover_pct.max() * 1.15)
+    ax1.set_xlim(-0.5, len(x) - 0.5)
+    ax1.set_xticks(x, [f"{lam:g}" for lam in frontier.lambdas])
 
-    # -----------------------------------------------------------------------
-    # Visual Callout 1: Unconstrained Baseline (λ = 0)
-    # -----------------------------------------------------------------------
-    idx_0 = 0
-    lam_0 = lambdas[idx_0]
-    sh_0 = sharpes[idx_0]
-    to_0 = turnovers[idx_0]
+    ax1.set_xlabel("L1 turnover penalty λ_tc (tested grid points, not to scale)", fontsize=12,
+                   fontweight="bold", color=c["text"], labelpad=10)
+    ax1.set_ylabel("Net Sharpe ratio (10bp costs)", fontsize=12, fontweight="bold",
+                   color=c["sharpe"], labelpad=10)
+    ax2.set_ylabel("Annual turnover (%)", fontsize=12, fontweight="bold", color=c["turnover"], labelpad=12)
+    ax1.tick_params(axis="y", labelcolor=c["sharpe"], labelsize=11)
+    ax1.tick_params(axis="x", labelcolor=c["text"], labelsize=10.5)
+    ax2.tick_params(axis="y", labelcolor=c["turnover"], labelsize=11)
+    ax2.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{int(v):,}%"))
+    ax1.grid(True, linestyle=":", alpha=0.7, color=c["grid"])
+    return [line_sharpe, line_turnover, *bench_lines]
 
-    callout1_text = (
-        "Unconstrained Baseline (λ = 0)\n"
-        f"• Annual Turnover: {to_0:,.0f}%\n"
-        f"• Net Sharpe (10bp): {sh_0:.2f}\n"
-        "⚠ Extreme turnover erodes alpha under friction"
+
+def add_summary_box(ax, frontier: Frontier, qp_only: Frontier, c: dict) -> None:
+    best = int(np.argmax(frontier.sharpe))
+    to_0, sh_0 = frontier.turnover_pct[0], frontier.sharpe[0]
+    to_b, sh_b = frontier.turnover_pct[best], frontier.sharpe[best]
+    steps = np.diff(frontier.sharpe)
+    shape = "non-monotone in λ" if (steps > 0).any() and (steps < 0).any() else "monotone in λ"
+    text = (
+        f"Best grid point (picked after the fact): λ = {frontier.lambdas[best]:g}\n"
+        f"• Turnover {to_0:,.0f}% → {to_b:,.0f}% ({100 * (to_b / to_0 - 1):+.1f}%), "
+        f"net Sharpe {sh_0:.3f} → {sh_b:.3f} ({sh_b - sh_0:+.3f})\n"
+        f"• Sharpe is {shape} (λ = {frontier.lambdas[-1]:g}: {frontier.sharpe[-1]:.3f}) "
+        "→ needs a pre-registered test\n"
+        f"• At λ = {frontier.lambdas[-1]:g}: QP alone {qp_only.turnover_pct[-1]:,.0f}% vs "
+        f"with safeguard {frontier.turnover_pct[-1]:,.0f}% → residual is safeguard trading"
+    )
+    ax.text(
+        0.015, 0.03, text, transform=ax.transAxes, ha="left", va="bottom", fontsize=9.8,
+        fontweight="bold", color=c["text"], zorder=10, linespacing=1.45,
+        bbox={"boxstyle": "round,pad=0.55,rounding_size=0.3", "facecolor": c["box_bg"],
+              "edgecolor": c["box_edge"], "linewidth": 1.8, "alpha": 0.97},
     )
 
-    ax1.annotate(
-        callout1_text,
-        xy=(lam_0, sh_0),
-        xytext=(lam_0 + 0.00045, sh_0 - 0.16),
-        fontsize=10.5,
-        fontweight="bold",
-        color=text_primary,
-        bbox=dict(
-            boxstyle="round,pad=0.6,rounding_size=0.3",
-            facecolor=c_callout1_bg,
-            edgecolor=c_callout1_ec,
-            linewidth=1.8,
-            alpha=0.96,
-        ),
-        arrowprops=dict(
-            arrowstyle="->,head_width=0.4,head_length=0.7",
-            color=c_callout1_ec,
-            linewidth=2.2,
-            connectionstyle="arc3,rad=-0.15",
-        ),
-        zorder=10,
-    )
 
-    # -----------------------------------------------------------------------
-    # Visual Callout 2: Optimal Regularized Point (λ = 0.002)
-    # -----------------------------------------------------------------------
-    # Identify target optimal point (closest to 0.002)
-    target_idx = np.argmin(np.abs(lambdas - 0.0020))
-    lam_opt = lambdas[target_idx]
-    sh_opt = sharpes[target_idx]
-    to_opt = turnovers[target_idx]
+def plot_turnover_bars(ax, perf: dict, c: dict) -> None:
+    style_axis(ax, c)
+    labels = [label for _, label in TURNOVER_STRATEGIES]
+    values = np.array([perf[key]["turnover_annual_pct"] for key, _ in TURNOVER_STRATEGIES])
+    colors = [c["turnover"] if key in HIGHLIGHTED_STRATEGIES else c["bar_muted"] for key, _ in TURNOVER_STRATEGIES]
+    y = np.arange(len(values))
 
-    # Highlight optimal point with gold/emerald ring
-    ax1.scatter(
-        [lam_opt],
-        [sh_opt],
-        s=340,
-        facecolors="none",
-        edgecolors="#10b981",
-        linewidths=3.0,
-        zorder=7,
-    )
-    ax1.scatter(
-        [lam_opt],
-        [sh_opt],
-        s=500,
-        facecolors="none",
-        edgecolors="#10b981",
-        linewidths=1.5,
-        linestyle="--",
-        zorder=7,
-    )
+    ax.barh(y, values, color=colors, height=0.62)
+    ax.set_yticks(y, labels)
+    ax.invert_yaxis()
+    for yi, value in zip(y, values):
+        ax.text(value + values.max() * 0.02, yi, f"{value:,.0f}%", va="center", fontsize=10,
+                fontweight="bold", color=c["text"])
+    ax.set_xlim(0, values.max() * 1.32)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{int(v):,}%"))
+    ax.tick_params(axis="both", labelcolor=c["text"], labelsize=10)
+    ax.grid(True, axis="x", linestyle=":", alpha=0.7, color=c["grid"])
+    ax.set_title("Where the turnover comes from (λ_tc = 0)\n(pre-registered run, primary period, 10bp)",
+                 fontsize=11.5, fontweight="bold", color=c["text"], loc="left", pad=10)
 
-    pct_reduction = 100 * (1 - to_opt / to_0)
-    delta_sharpe = sh_opt - sh_0
+    ratio = perf["ito_tsfm"]["turnover_annual_pct"] / perf["ito_hist"]["turnover_annual_pct"]
+    ax.text(0.0, -0.13, f"Same QP, Chronos μ vs historical μ: {ratio:.1f}× the turnover",
+            transform=ax.transAxes, fontsize=10, fontweight="bold", color=c["turnover"])
 
-    callout2_text = (
-        f"★ Optimal L1 Regularization (λ = {lam_opt:.4f})\n"
-        f"• Turnover: {to_opt:,.0f}% (-{pct_reduction:.0f}%)\n"
-        f"• Net Sharpe (10bp): {sh_opt:.2f} ({delta_sharpe:+.2f})\n"
-        "✓ Substantially outperforms MVO (0.98) by taming friction"
-    )
 
-    ax1.annotate(
-        callout2_text,
-        xy=(lam_opt, sh_opt),
-        xytext=(lam_opt + 0.00035, sh_opt + 0.075),
-        fontsize=10.5,
-        fontweight="bold",
-        color=text_primary,
-        bbox=dict(
-            boxstyle="round,pad=0.6,rounding_size=0.3",
-            facecolor=c_callout2_bg,
-            edgecolor=c_callout2_ec,
-            linewidth=2.0,
-            alpha=0.96,
-        ),
-        arrowprops=dict(
-            arrowstyle="->,head_width=0.4,head_length=0.7",
-            color=c_callout2_ec,
-            linewidth=2.2,
-            connectionstyle="arc3,rad=-0.12",
-        ),
-        zorder=10,
-    )
-
-    # -----------------------------------------------------------------------
-    # Axes Formatting & Limits
-    # -----------------------------------------------------------------------
-    ax1.set_xlim(-0.0002, 0.00525)
-    ax1.set_xlabel(
-        "L1 Turnover Regularization Parameter λ_tc (Annualized Objective Units)",
-        fontsize=12,
-        fontweight="bold",
-        color=text_primary,
-        labelpad=12,
-    )
-
-    # Left Axis: Sharpe
-    ax1.set_ylim(0.70, 1.25)
-    ax1.set_ylabel(
-        "Net Sharpe Ratio (10bp Transaction Costs)",
-        fontsize=12.5,
-        fontweight="bold",
-        color=c_sharpe,
-        labelpad=12,
-    )
-    ax1.tick_params(axis="y", labelcolor=c_sharpe, labelsize=11)
-    ax1.tick_params(axis="x", labelcolor=text_primary, labelsize=11)
-
-    # Right Axis: Turnover
-    ax2.set_ylim(0, 3200)
-    ax2.set_ylabel(
-        "Annual Portfolio Turnover (%)",
-        fontsize=12.5,
-        fontweight="bold",
-        color=c_turnover,
-        labelpad=14,
-    )
-    ax2.tick_params(axis="y", labelcolor=c_turnover, labelsize=11)
-    ax2.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, p: f"{int(x):,}%"))
-
-    # Grid lines on left axis
-    ax1.grid(True, linestyle=":", alpha=0.6, color=grid_color)
-    ax2.grid(False)
-
-    # Spines styling
-    for sp in ["top"]:
-        ax1.spines[sp].set_visible(False)
-        ax2.spines[sp].set_visible(False)
-    for sp in ["left", "bottom"]:
-        ax1.spines[sp].set_color(spine_color)
-        ax1.spines[sp].set_linewidth(1.3)
-    ax2.spines["right"].set_color(spine_color)
-    ax2.spines["right"].set_linewidth(1.3)
-
-    # -----------------------------------------------------------------------
-    # Titles & Institutional Headers
-    # -----------------------------------------------------------------------
-    title_main = "L1 Turnover Regularization Frontier (Trading Friction Post-Mortem)"
-    subtitle = (
-        "Ito-Kelly Quadratic Program with Sparsity Penalty: "
+def add_headers(fig, c: dict) -> None:
+    fig.text(0.06, 0.965, "L1 Turnover Penalty Grid — EXPLORATORY (not pre-registered)",
+             fontsize=16.5, fontweight="bold", color=c["text"], ha="left", va="top")
+    fig.text(
+        0.06, 0.915,
         r"$\min_w \frac{1}{2} w' \Sigma w - \mu' w + \lambda_{\mathrm{tc}} \|w - w_{t-1}\|_1$"
-        "  s.t.  CVaR constraints"
-    )
-
-    fig.text(
-        0.08,
-        0.965,
-        title_main,
-        fontsize=16.5,
-        fontweight="bold",
-        color=text_primary,
-        ha="left",
-        va="top",
+        "   s.t.  1'w = 1,  0 ≤ w ≤ 0.40,  CVaR95(w) ≤ CVaR95(EW)",
+        fontsize=11.5, color=c["text_muted"], ha="left", va="top",
     )
     fig.text(
-        0.08,
-        0.915,
-        subtitle,
-        fontsize=11.5,
-        color=text_secondary,
-        ha="left",
-        va="top",
+        0.96, 0.965, "2026 연합 경제 학술제 본선 [Backup Slide 27]  |  서강대학교 경제학과 AlphaQuant",
+        fontsize=10, fontweight="bold", color=c["text_muted"], ha="right", va="top",
+        bbox={"boxstyle": "square,pad=0.35", "facecolor": c["badge_bg"], "edgecolor": c["spine"],
+              "linewidth": 1.0},
     )
-
-    # Header Badge (Right Top)
-    badge_text = "2026 연합 경제 학술제 본선 [Backup Slide 27]  |  서강대학교 경제학과 AlphaQuant"
     fig.text(
-        0.90,
-        0.965,
-        badge_text,
-        fontsize=10,
-        fontweight="bold",
-        color=text_secondary,
-        ha="right",
-        va="top",
-        bbox=dict(
-            boxstyle="square,pad=0.35",
-            facecolor="#f1f5f9" if theme == "light" else "#1e293b",
-            edgecolor=spine_color,
-            linewidth=1.0,
-        ),
+        0.06, 0.012,
+        "* EXPLORATORY (PREREGISTRATION.md §8): the λ_tc grid was chosen after results were seen. "
+        "λ_tc = 0 is the pre-registered model and reproduces results/results.json.\n"
+        "  Primary period 2017-01-02 → 2026-08-31 (fully out-of-sample), 10bp cost. "
+        "Sources: results/exploratory_turnover_regularization.json, results/results.json.",
+        fontsize=8.5, color=c["text_muted"], ha="left", va="bottom",
     )
 
-    # -----------------------------------------------------------------------
-    # Combined Legend
-    # -----------------------------------------------------------------------
-    handles = [line_sharpe, line_to, mvo_ref, bench_6040]
-    legend = ax1.legend(
-        handles=handles,
-        loc="lower center",
-        bbox_to_anchor=(0.5, -0.165),
-        ncol=4,
-        fontsize=10.5,
-        frameon=True,
-        facecolor=bg_ax,
-        edgecolor=spine_color,
-        framealpha=0.9,
+
+def render(frontier: Frontier, qp_only: Frontier, perf: dict, theme: str, output_path: Path) -> None:
+    setup_typography()
+    c = THEMES[theme]
+    fig = plt.figure(figsize=(15.5, 8.72), dpi=300)
+    fig.patch.set_facecolor(c["fig_bg"])
+    grid = fig.add_gridspec(1, 2, width_ratios=(2.3, 1.0), wspace=0.42,
+                            left=0.06, right=0.96, top=0.85, bottom=0.21)
+    ax_frontier = fig.add_subplot(grid[0, 0])
+    ax_bars = fig.add_subplot(grid[0, 1])
+    style_axis(ax_frontier, c)
+
+    handles = plot_frontier(ax_frontier, frontier, perf, c)
+    add_summary_box(ax_frontier, frontier, qp_only, c)
+    plot_turnover_bars(ax_bars, perf, c)
+    add_headers(fig, c)
+
+    legend = ax_frontier.legend(
+        handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.11), ncol=3, fontsize=9.5,
+        frameon=True, facecolor=c["ax_bg"], edgecolor=c["spine"], framealpha=0.95,
     )
     for text in legend.get_texts():
-        text.set_color(text_primary)
+        text.set_color(c["text"])
 
-    # Footnote / Disclaimer
-    disclaimer = (
-        "* Note: Primary period (2017–2026). Pre-registered baseline is λ_tc = 0 (Turnover 2,804%, Sharpe 0.90). "
-        "L1 regularization frontier explores transaction cost mitigation for institutional execution."
-    )
-    fig.text(
-        0.08,
-        0.015,
-        disclaimer,
-        fontsize=8.5,
-        color=text_secondary,
-        ha="left",
-        va="bottom",
-    )
-
-    plt.subplots_adjust(top=0.86, bottom=0.15, left=0.08, right=0.90)
-
-    # Save image
-    if output_path:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor="none")
-        print(f"[SUCCESS] Saved {theme} chart ({output_path.name}) to {output_path}")
-
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=300, facecolor=fig.get_facecolor(), edgecolor="none")
     plt.close(fig)
+    print(f"[SUCCESS] Saved {theme} chart to {output_path}")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Generate Backup Slide 27 Turnover Frontier Chart")
-    parser.add_argument(
-        "--json",
-        type=Path,
-        default=None,
-        help="Path to exploratory_turnover_penalty.json",
-    )
-    parser.add_argument(
-        "--mode",
-        choices=["presentation", "empirical"],
-        default="presentation",
-        help="Data mode: 'presentation' (stylized target for Slide 27) or 'empirical' (raw JSON)",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_ICLOUD_DIR,
-        help="Target folder to save generated charts",
-    )
-    args = parser.parse_args()
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate the Backup Slide 27 turnover-penalty chart")
+    parser.add_argument("--json", type=Path, default=None, help="Path to exploratory_turnover_regularization.json")
+    parser.add_argument("--results", type=Path, default=None, help="Path to results/results.json")
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_ICLOUD_DIR,
+                        help="Folder for the generated charts")
+    return parser.parse_args()
 
-    # Load data
-    lambdas, turnovers, sharpes, is_stylized = load_frontier_data(args.json, mode=args.mode)
 
-    print(f"[DATA] Lambdas: {lambdas}")
-    print(f"[DATA] Turnovers: {turnovers}")
-    print(f"[DATA] Net Sharpes (10bp): {sharpes}")
+def main() -> None:
+    args = parse_args()
+    frontier_path = resolve_input(args.json, FRONTIER_CANDIDATES, "Frontier JSON")
+    results_path = resolve_input(args.results, RESULTS_CANDIDATES, "results.json")
+    print(f"[INFO] Frontier data: {frontier_path}")
+    print(f"[INFO] Benchmarks:    {results_path}")
+
+    grid_data = read_json(frontier_path)
+    frontier = load_frontier(grid_data, frontier_path, STRATEGY)
+    qp_only = load_frontier(grid_data, frontier_path, QP_ONLY_STRATEGY)
+    perf = load_performance(results_path)
+    check_baseline(frontier, perf)
+    print(f"[DATA] Lambdas: {frontier.lambdas.tolist()}")
+    print(f"[DATA] Turnover % ({STRATEGY}): {frontier.turnover_pct.tolist()}")
+    print(f"[DATA] Net Sharpe {COST_BP}bp ({STRATEGY}): {frontier.sharpe.tolist()}")
+    print(f"[DATA] Turnover % ({QP_ONLY_STRATEGY}): {qp_only.turnover_pct.tolist()}")
+    print(f"[DATA] Benchmarks: { {key: perf[key]['sharpe'] for key, _ in BENCHMARKS} }")
 
     target_dir = args.output_dir
-    if not target_dir.exists():
-        # Fallback to local results/ if iCloud folder is not mounted
-        target_dir = Path("results")
-        target_dir.mkdir(parents=True, exist_ok=True)
+    if target_dir == DEFAULT_ICLOUD_DIR and not target_dir.exists():
+        target_dir = Path("results")  # iCloud folder not mounted (e.g. on the Ubuntu server)
+    outputs = (("light", target_dir / LIGHT_FILENAME), ("dark", target_dir / DARK_FILENAME))
+    for theme, path in outputs:
+        render(frontier, qp_only, perf, theme, path)
 
-    # 1. Light Theme Chart (Primary Output)
-    light_out = target_dir / "backup_slide27_turnover_frontier.png"
-    create_frontier_plot(
-        lambdas,
-        turnovers,
-        sharpes,
-        is_stylized,
-        theme="light",
-        output_path=light_out,
-    )
-
-    # 2. Dark Theme Chart (Dual Slide Deck Support)
-    dark_out = target_dir / "backup_slide27_turnover_frontier_dark.png"
-    create_frontier_plot(
-        lambdas,
-        turnovers,
-        sharpes,
-        is_stylized,
-        theme="dark",
-        output_path=dark_out,
-    )
-
-    # Also mirror into local repo results/
-    repo_results_dir = Path("/Users/pj/dev/alphaquant-tsfm-voldrag/results")
-    if repo_results_dir.exists():
-        mirror_light = repo_results_dir / "backup_slide27_turnover_frontier.png"
-        mirror_dark = repo_results_dir / "backup_slide27_turnover_frontier_dark.png"
-        import shutil
-        shutil.copy2(light_out, mirror_light)
-        shutil.copy2(dark_out, mirror_dark)
-        print(f"[SUCCESS] Mirrored charts into {repo_results_dir}")
+    if MAIN_REPO_RESULTS_DIR.exists():
+        for _, path in outputs:
+            shutil.copy2(path, MAIN_REPO_RESULTS_DIR / path.name)
+        print(f"[SUCCESS] Mirrored charts into {MAIN_REPO_RESULTS_DIR}")
 
 
 if __name__ == "__main__":
