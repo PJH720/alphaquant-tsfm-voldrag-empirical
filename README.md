@@ -53,6 +53,8 @@ Results: [`results/REPORT.md`](results/REPORT.md).
 
 ## Demo site (`web/`)
 
+Live: **https://alphaquant-voldrag-demo.vercel.app** (Vercel project `alphaquant-voldrag-demo`).
+
 A static dashboard for the presentation: Next.js static export with Recharts. Every number on it comes from `web/public/data/*.json`, which `voldrag.export_web` generates from the committed `results/` and the submission bundle in the presentation repo. It shows no raw prices and no per-asset daily returns.
 
 Regenerate the data and run the site locally. The built `web/out` works offline; fonts are self-hosted.
