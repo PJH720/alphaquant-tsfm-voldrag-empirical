@@ -4,7 +4,8 @@
 
 1. Fresh mobile context, no ?api: every section renders with text, the live section shows the
    "정적 모드" badge, there are no console errors, and no request leaves the site's own origin
-   (or *.vercel.app): fonts are self-hosted, nothing goes to trycloudflare.com.
+   or a Vercel host (*.vercel.app; vercel.live serves the preview-only toolbar): fonts are self-hosted,
+   nothing goes to trycloudflare.com.
 2. Fresh context with ?api=https://invalid.example.invalid: the badge reports the backend as not
    responding within 10 s and no card in the live section is blank.
 Exits 1 on any failure.
@@ -20,7 +21,13 @@ from urllib.parse import urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
-from site_walk import VIEWPORT, hydrate_all, launch
+from site_walk import VIEWPORT, authorize, hydrate_all, launch
+
+
+def vercel_host(host: str) -> bool:
+    """Vercel's own hosts (deployment, preview toolbar). Anything else is a foreign request."""
+    return host.endswith((".vercel.app", ".vercel.com", ".vercel.live")) or host in ("vercel.live", "vercel.com")
+
 
 SECTIONS = ("hero", "compare", "costs", "lambda", "crisis", "curves", "drag", "vs", "significance", "live", "provenance")
 
@@ -39,7 +46,8 @@ def main() -> int:
         errors, foreign = [], []
         page.on("console", lambda m: m.type == "error" and errors.append(m.text))
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.on("request", lambda r: (urlparse(r.url).netloc not in (own, "") and not urlparse(r.url).netloc.endswith(".vercel.app")
+        authorize(page)
+        page.on("request", lambda r: (urlparse(r.url).netloc not in (own, "") and not vercel_host(urlparse(r.url).netloc)
                                       and not r.url.startswith("data:")) and foreign.append(r.url))
         page.goto(args.url, wait_until="load")
         hydrate_all(page)
@@ -64,6 +72,7 @@ def main() -> int:
 
         ctx = browser.new_context(viewport=VIEWPORT, is_mobile=True, has_touch=True)
         page = ctx.new_page()
+        authorize(page)
         sep = "&" if "?" in args.url else "?"
         page.goto(f"{args.url}{sep}api=https://invalid.example.invalid#live", wait_until="load")
         page.locator("#live").scroll_into_view_if_needed()

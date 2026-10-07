@@ -25,6 +25,12 @@ def launch(p):
         return p.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
 
 
+def authorize(page: Page) -> None:
+    """For a protected Vercel preview: visit the temporary share link (env AUTH_URL) to set the cookie."""
+    if os.environ.get("AUTH_URL"):
+        page.goto(os.environ["AUTH_URL"], wait_until="load")
+
+
 def hydrate_all(page: Page) -> None:
     """Scroll through the page so every lazy island and chart mounts, then return to the top."""
     height = page.evaluate("document.documentElement.scrollHeight")
@@ -90,6 +96,7 @@ def walk(url: str, collect: Callable[[Page, str], None], *, console: list | None
         if console is not None:
             page.on("console", lambda m: console.append((m.type, m.text)))
             page.on("pageerror", lambda e: console.append(("pageerror", str(e))))
+        authorize(page)
         page.goto(url, wait_until="load")
         hydrate_all(page)
         collect(page, "initial"); states.append("initial")
