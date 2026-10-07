@@ -35,7 +35,15 @@ uv run pytest                              # tests
 uv run pytest tests/test_pipeline.py::test_name   # single test
 scripts/start_live_backend.sh              # live lab: FastAPI (uv sync --group live) + Cloudflare Quick Tunnel
 cd web && pnpm i && pnpm build             # demo site (Next.js static export -> web/out); see web/AGENTS.md
+uv run python scripts/verify_reproduction.py A/results.json B/results.json   # re-run vs committed record
+uv run python scripts/verify_export.py      # results/ == web/public/data, source sha256s
+uv run --with playwright python scripts/verify_site_numbers.py --url http://127.0.0.1:4173/  # every <Num> == JSON
+uv run --with playwright python scripts/scan_forbidden.py <patterns outside repo> --url …    # forbidden claims
+uv run --with playwright python scripts/verify_offline.py --url …                             # site with GPU offline
 ```
+
+Site rule: every result number renders through `web/src/components/Num.tsx` (`src` = JSON path, or `expr`
+from `web/src/lib/expr.ts`); never type a result into TSX. Other digits must match `scripts/number_allowlist.txt`.
 
 `load_market_data()` downloads from Yahoo (yfinance) and the FRED public CSV endpoint on the first call. It caches each source as parquet in `data/raw/`, which is gitignored because vendor data is not redistributed. It then rewrites `data/manifest.json` with the sha256, row count and date range of each cached file. The manifest is committed, so a diff in it means the upstream data changed.
 

@@ -64,6 +64,8 @@ uv run python -m voldrag.export_web          # results/ -> web/public/data/*.jso
 cd web && pnpm i && pnpm build && npx serve out
 ```
 
+Checks (post-results tooling): `scripts/verify_export.py` (exported JSON == committed `results/`), `scripts/verify_site_numbers.py` (every rendered number == JSON in every toggle state; other digits need a sourced entry in `scripts/number_allowlist.txt`), `scripts/verify_offline.py` (site complete with the GPU backend offline).
+
 To deploy to Vercel, use the `web/` directory as the project root. `web/vercel.json` sets framework nextjs, pnpm install and `pnpm build`.
 
 ```bash
