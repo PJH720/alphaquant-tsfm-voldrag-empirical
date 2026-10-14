@@ -29,8 +29,7 @@ While the companion repository presents the research paper, mathematical proofs,
 
 - 📊 **Live Interactive Dashboard**: [alphaquant-voldrag-demo.vercel.app](https://alphaquant-voldrag-demo.vercel.app)
 - 📑 **Companion Paper Repository**: [PJH720/alphaquant-tsfm-voldrag](https://github.com/PJH720/alphaquant-tsfm-voldrag)
-- 🎯 **Presentation Slide Deck (PDF)**: [Google Drive Slide Deck](https://drive.google.com/file/d/1WZzcCbN3eu82t1ncEctKWJ_VqR8GhlLW/view?usp=sharing)
-- 📄 **Research Paper Manuscript (PDF)**: [Google Drive Paper Manuscript](https://drive.google.com/file/d/19fN7rLw76XGthML_M3ARB8wZMfzs_1w9/view?usp=sharing)
+- 🎯 **Presentation Slide Deck (PDF)**: [Google Drive Slide Deck](https://drive.google.com/file/d/1ScTTcfiv9SUqMxteyiuw_xbrMi4YIYd0/view?usp=sharing)
 
 ---
 
