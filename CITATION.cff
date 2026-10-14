@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this research reproduction pipeline or empirical data, please cite it as below."
+title: "AlphaQuant: Real-Market Data Reproduction and Empirical Evaluation Pipeline for Itô × TSFM Volatility-Drag Portfolio Framework"
+authors:
+  - family-names: "박"
+    given-names: "재현"
+    affiliation: "서강대학교 경제학과"
+    email: "pjhlemont@gmail.com"
+  - family-names: "강"
+    given-names: "명서"
+    affiliation: "서강대학교 경제학과"
+year: 2026
+conference:
+  name: "2026 연합 경제 학술제 (서강대학교 · 성균관대학교 · 이화여자대학교)"
+repository-code: "https://github.com/PJH720/alphaquant-tsfm-voldrag-empirical"
+url: "https://alphaquant-voldrag-demo.vercel.app"
+keywords:
+  - volatility-drag
+  - empirical-finance
+  - time-series-foundation-models
+  - portfolio-optimization
+  - reproduction
+  - quantitative-finance
+license: "MIT"

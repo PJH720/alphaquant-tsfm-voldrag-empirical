@@ -1,0 +1,28 @@
+{
+ "RF": 0.02,
+ "W_CAP": 0.4,
+ "ALPHA": 0.95,
+ "W_ITO": 504,
+ "HORIZON": 5,
+ "CHRONOS_MODEL": "amazon/chronos-bolt-small",
+ "TAU_Q": 0.95,
+ "TAU_WINDOW": 252,
+ "BASE_COST_BP": 10,
+ "COSTS_BP": [
+  0,
+  10,
+  20
+ ],
+ "BOOT_B": 10000,
+ "BOOT_BLOCK": 10,
+ "SEED": 20261007,
+ "rebalancing": "weekly + safeguard trades",
+ "notes": {
+  "W_ITO": "rolling window = number of CVaR scenarios"
+ },
+ "source": {
+  "file": "src/voldrag/config.py",
+  "commit": "6f396c5",
+  "sha256": "325cc5175af0c731fa696d1fafd8a715d86d005390e32124d079763ba1c46ec1"
+ }
+}

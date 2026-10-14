@@ -1,0 +1,29 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.ruff_cache/
+.pytest_cache/
+
+# Virtual environments
+.venv
+
+# Data caches & model weights (vendor data is not redistributed)
+data/raw/
+data/cache/
+*.parquet
+.DS_Store
+*.docx
+*.pdf
+
+# Internal working documents & agent notes
+docs/
+CLAUDE.md
+web/CLAUDE.md
+web/AGENTS.md
+.omc/
+.remember/
+

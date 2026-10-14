@@ -1,0 +1,80 @@
+{
+  "069500.KS.parquet": {
+    "sha256": "e83e6a4460372faca8cbcf75c37486cb80cb193f5303b4bb26288992edde8912",
+    "rows": 3344,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "148070.KS.parquet": {
+    "sha256": "c77dc1b8c56e20775cc333b6d4d75f88fce860d16db338d31a6a3b6c40bc66ea",
+    "rows": 3342,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "229200.KS.parquet": {
+    "sha256": "c9b6299d8d785e3396e31f5dae2cade339e5813c0c297dad83aed09871ffcd8a",
+    "rows": 2650,
+    "first": "2015-10-01",
+    "last": "2026-09-04"
+  },
+  "FRED_BAA10Y.parquet": {
+    "sha256": "a45a755c97aab06864bf0557ea3061cf911234268d1d9c2ea31059e5bfe60f25",
+    "rows": 3436,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "FRED_DEXKOUS.parquet": {
+    "sha256": "3991f5d4d97ada4d4b282ff017e1d4b9f78fc65babeb228e71ebca92c1d49def",
+    "rows": 3440,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "FRED_T10Y2Y.parquet": {
+    "sha256": "32927262ff8aa4dc0b8dc5b53fe4d2ab013d00257483925dec6b707b8657a2af",
+    "rows": 3441,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "FRED_VIXCLS.parquet": {
+    "sha256": "57e2b36d88776a9f41e23ee13045e83aafd45e64caca2603fbe25bb5dd371730",
+    "rows": 3492,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "GLD.parquet": {
+    "sha256": "a7dac33526dead55de9c0276aa17fcac61f77458b54fe014cea7316e5cdfbe83",
+    "rows": 3460,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "IDX_KQ11.parquet": {
+    "sha256": "09c1bd81bcca96f4dca11483ee4a16dc80d9acab2a5efdb571eb4b3ddfb2a73f",
+    "rows": 3372,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "IDX_KS11.parquet": {
+    "sha256": "4e896bdbe7b8d3522d5396c3b4650bba0a5fde1159e9be7478d36984159f90b0",
+    "rows": 3372,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "QQQ.parquet": {
+    "sha256": "20219b86d6747ffa0c01fa656009ae2aec53cfe55d8776a6d4815600ffc685e7",
+    "rows": 3460,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "SHV.parquet": {
+    "sha256": "9927c01e14f9468a00f97ec1f52f5c30854f6eca3f506093c3aa9a983c57277a",
+    "rows": 3460,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  },
+  "SPY.parquet": {
+    "sha256": "22014a07707bb15589d6ab352f9065f519596795c009599b5dc83dfe536e6e2c",
+    "rows": 3460,
+    "first": "2012-12-03",
+    "last": "2026-09-04"
+  }
+}

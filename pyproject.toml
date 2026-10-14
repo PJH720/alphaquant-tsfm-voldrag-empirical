@@ -1,0 +1,39 @@
+[project]
+name = "voldrag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "JaeHyun Park", email = "pjhlemont@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "chronos-forecasting>=2.3.2",
+    "clarabel>=0.11.1",
+    "cvxpy>=1.9.3",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "pyarrow>=25.0.1",
+    "pykrx>=1.0.51",
+    "pyyaml>=6.0.3",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
+    "setuptools<84",
+    "statsmodels>=0.15.0",
+    "torch>=2.14.1",
+    "yfinance>=1.7.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.9,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+live = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
