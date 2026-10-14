@@ -45,7 +45,7 @@ To eliminate look-ahead bias and p-hacking, this project adheres to strict open-
    - KOSDAQ composite (`^KQ11`) proxy prior to ETF listing,
    - VKOSPI proxy via realized 21-day volatility.
 3. **No Look-Ahead Guarantee Across Time Zones**: US market closes and FX fixes occur after KRX close. All US assets and FX rates used on KRX trade date $t$ strictly precede $t$.
-4. **Data Verification Suite ([`DATA.md`](DATA.md))**: All ingested market data is validated against published benchmark indices (KOSPI year-end closes, ETF annual returns, FRED stress events). Raw proprietary ticker feeds are not redistributed; SHA-256 integrity digests are maintained in [`data/manifest.json`](data/manifest.json).
+4. **Data Verification Suite ([`DATA.md`](DATA.md))**: All ingested market data is validated against published benchmark indices (KOSPI year-end closes, ETF annual returns, FRED stress events). Lightweight verified Parquet datasets (~776 KB) and Chronos-Bolt forecast caches (~92 KB) are committed in `data/` for instant zero-dependency offline reproduction; SHA-256 integrity digests are maintained in [`data/manifest.json`](data/manifest.json).
 
 ---
 
@@ -168,5 +168,5 @@ If you reference this empirical pipeline or benchmark findings, please cite as:
 
 ## 📄 License
 
-This software and reproduction code are distributed under the [MIT License](LICENSE).
-Market data indices and proprietary ticker series remain the property of their respective providers and are not redistributed.
+This software and reproduction pipeline are distributed under the [MIT License](LICENSE).
+Historical market datasets bundled in `data/` are aggregated research proxies provided for non-commercial scholarly reproduction purposes.
